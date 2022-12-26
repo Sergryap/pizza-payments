@@ -117,6 +117,23 @@ def upload_image(file_location):
     return response.json()
 
 
+def create_main_image_relationship(product_id, image_id):
+    url = f'https://api.moltin.com/v2/products/{product_id}/relationships/main-image'
+    headers = {
+        'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}',
+        'Content-Type': 'application/json'
+    }
+    json_data = {
+        'data': {
+            'type': 'main_image',
+            'id': image_id
+        }
+    }
+    response = requests.post(url=url, headers=headers, json=json_data)
+    response.raise_for_status()
+    return response.json()
+
+
 def get_pcm_products():
     url = 'https://api.moltin.com/pcm/products'
     headers = {'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}'}
@@ -132,5 +149,5 @@ if __name__ == '__main__':
     # pprint(create_pcm_product('test test test2', 'test-6', 'description-test'))
     # pprint(add_product_price('8b0a9130-1cda-4450-bec3-b96e383d42a0', 'test-6', 999))
     # pprint(get_pcm_products())
-    pprint(upload_image('https://dodopizza-a.akamaihd.net/static/Img/Products/Pizza/ru-RU/1626f452-b56a-46a7-ba6e-c2c2c9707466.jpg'))
+    # pprint(upload_image('https://dodopizza-a.akamaihd.net/static/Img/Products/Pizza/ru-RU/1626f452-b56a-46a7-ba6e-c2c2c9707466.jpg'))
 
