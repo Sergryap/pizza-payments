@@ -25,7 +25,7 @@ def check_token(error=False):
         os.environ['ACCESS_TOKEN'] = token_data['access_token']
 
 
-def create_product(name, sku, description, price):
+def create_product(name: str, sku: str, description: str, price: int):
     url = 'https://api.moltin.com/v2/products'
     headers = {
         'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}',
@@ -55,7 +55,7 @@ def create_product(name, sku, description, price):
     return response.json()
 
 
-def create_pcm_product(name, sku, description):
+def create_pcm_product(name: str, sku: str, description: str):
     url = 'https://api.moltin.com/pcm/products'
     headers = {
         'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}',
@@ -71,8 +71,32 @@ def create_pcm_product(name, sku, description):
                 'slug': slugify(name),
                 'description': description,
                 'status': 'live',
-
             },
+        }
+    }
+    response = requests.post(url=url, headers=headers, json=json_data)
+    response.raise_for_status()
+    return response.json()
+
+
+def add_product_price(price_book_id: str, sku: str, price: int):
+    url = f'https://api.moltin.com/pcm/pricebooks/{price_book_id}/prices'
+    headers = {
+        'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}',
+        'Content-Type': 'application/json'
+    }
+    json_data = {
+        'data': {
+            'type': 'product-price',
+            'attributes': {
+                'sku': sku,
+                'currencies': {
+                    'RUB': {
+                        'amount': price,
+                        'includes_tax': True,
+                    }
+                }
+            }
         }
     }
     response = requests.post(url=url, headers=headers, json=json_data)
@@ -92,5 +116,6 @@ if __name__ == '__main__':
     env = Env()
     env.read_env()
     check_token()
-    pprint(create_pcm_product('test test test2', 'test-6', 'description-test'))
+    # pprint(create_pcm_product('test test test2', 'test-6', 'description-test'))
+    pprint(add_product_price('8b0a9130-1cda-4450-bec3-b96e383d42a0', 'test-6', 999))
     # pprint(get_pcm_products())
