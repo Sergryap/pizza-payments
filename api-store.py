@@ -104,6 +104,19 @@ def add_product_price(price_book_id: str, sku: str, price: int):
     return response.json()
 
 
+def upload_image(file_location):
+    url = 'https://api.moltin.com/v2/files'
+    headers = {
+        'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}'
+    }
+    files = {
+        'file_location': (None, file_location),
+    }
+    response = requests.post(url, headers=headers, files=files)
+    response.raise_for_status()
+    return response.json()
+
+
 def get_pcm_products():
     url = 'https://api.moltin.com/pcm/products'
     headers = {'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}'}
@@ -117,5 +130,7 @@ if __name__ == '__main__':
     env.read_env()
     check_token()
     # pprint(create_pcm_product('test test test2', 'test-6', 'description-test'))
-    pprint(add_product_price('8b0a9130-1cda-4450-bec3-b96e383d42a0', 'test-6', 999))
+    # pprint(add_product_price('8b0a9130-1cda-4450-bec3-b96e383d42a0', 'test-6', 999))
     # pprint(get_pcm_products())
+    pprint(upload_image('https://dodopizza-a.akamaihd.net/static/Img/Products/Pizza/ru-RU/1626f452-b56a-46a7-ba6e-c2c2c9707466.jpg'))
+
