@@ -1,5 +1,9 @@
 import json
-from pprint import pprint
+import os
+import api_store as api
+import requests
+
+from environs import Env
 
 
 def upload_file(file):
@@ -8,6 +12,33 @@ def upload_file(file):
     return json.loads(data)
 
 
+def upload_products(file='menu.json'):
+    products = upload_file(file)
+    for product in products:
+        try:
+            created_product = api.create_pcm_product(
+                name=product['name'],
+                sku=str(product['id']),
+                description=product['description']
+            )
+            api.add_product_price(
+                price_book_id=os.environ['PRICE_BOOK_ID'],
+                sku=str(product['id']),
+                price=product['price']
+            )
+            image = api.upload_image_url(
+                file_location=product['product_image']['url']
+            )
+            api.create_main_image_relationship(
+                product_id=created_product['data']['id'],
+                image_id=image['data']['id']
+            )
+        except requests.exceptions.HTTPError:
+            continue
+
+
 if __name__ == '__main__':
-    pprint(upload_file('addresses.json'))
-    pprint(upload_file('menu.json'))
+    env = Env()
+    env.read_env()
+    api.check_token()
+    upload_products()

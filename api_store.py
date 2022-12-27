@@ -1,7 +1,5 @@
 import os
 import time
-from pprint import pprint
-
 import requests
 
 from environs import Env
@@ -23,6 +21,7 @@ def check_token(error=False):
         token_data = response.json()
         os.environ['TOKEN_EXPIRES'] = str(token_data['expires'] - 60)
         os.environ['ACCESS_TOKEN'] = token_data['access_token']
+        print(token_data)
 
 
 def create_product(name: str, sku: str, description: str, price: int):
@@ -104,7 +103,7 @@ def add_product_price(price_book_id: str, sku: str, price: int):
     return response.json()
 
 
-def upload_image(file_location):
+def upload_image_url(file_location):
     url = 'https://api.moltin.com/v2/files'
     headers = {
         'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}'
@@ -118,20 +117,19 @@ def upload_image(file_location):
 
 
 def create_main_image_relationship(product_id, image_id):
-    url = f'https://api.moltin.com/v2/products/{product_id}/relationships/main-image'
+    url = f'https://api.moltin.com/pcm/products/{product_id}/relationships/main_image'
     headers = {
         'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}',
         'Content-Type': 'application/json'
     }
     json_data = {
         'data': {
-            'type': 'main_image',
+            'type': 'file',
             'id': image_id
         }
     }
     response = requests.post(url=url, headers=headers, json=json_data)
     response.raise_for_status()
-    return response.json()
 
 
 def get_pcm_products():
@@ -146,8 +144,4 @@ if __name__ == '__main__':
     env = Env()
     env.read_env()
     check_token()
-    # pprint(create_pcm_product('test test test2', 'test-6', 'description-test'))
-    # pprint(add_product_price('8b0a9130-1cda-4450-bec3-b96e383d42a0', 'test-6', 999))
-    # pprint(get_pcm_products())
-    # pprint(upload_image('https://dodopizza-a.akamaihd.net/static/Img/Products/Pizza/ru-RU/1626f452-b56a-46a7-ba6e-c2c2c9707466.jpg'))
 
