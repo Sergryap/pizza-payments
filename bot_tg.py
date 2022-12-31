@@ -89,3 +89,36 @@ def handle_description(update: Update, context: CallbackContext):
         reference=update.effective_user.id
     )
     return "HANDLE_DESCRIPTION"
+
+
+def get_cart_info(update: Update, context: CallbackContext):
+    total_value = (
+        api.get_cart(update.effective_user.id)
+        ['data']['meta']['display_price']['without_tax']['formatted']
+    )
+    cart_items = api.get_cart_items(update.effective_user.id)
+    msg = ''
+    custom_keyboard = []
+    for item in cart_items['data']:
+        msg += f'''
+        {item['name']}
+        {item['description']}
+        {item['meta']['display_price']['without_tax']['unit']['formatted']}
+        {item['quantity']}шт. за {item['meta']['display_price']['without_tax']['value']['formatted']}
+        '''
+        custom_keyboard.append(
+            [InlineKeyboardButton(f'Убрать из корзины {item["name"]}', callback_data=item['id'])]
+        )
+    custom_keyboard.append([InlineKeyboardButton('Меню', callback_data='/start')])
+    custom_keyboard.append([InlineKeyboardButton('Оплата', callback_data='/pay')])
+    msg = f'''
+        {msg}        
+        Total: {total_value}
+        '''
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=dedent(msg),
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=custom_keyboard, resize_keyboard=True)
+    )
+
+    return 'HANDLER_CART'
