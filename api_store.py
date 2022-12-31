@@ -160,11 +160,19 @@ def create_flow(name, description, enabled=True):
     return response.json()
 
 
+def delete_flow(flow_id):
+    url = f'https://api.moltin.com/v2/flows/{flow_id}'
+    headers = {'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}'}
+    response = requests.delete(url=url, headers=headers)
+    response.raise_for_status()
+
+
 if __name__ == '__main__':
     env = Env()
     env.read_env()
     check_token()
     print(create_flow(
-        name='branch_addresses',
+        name='Branch addresses',
         description='Addresses of branches of pizzerias'
     ))
+    # delete_flow('63618de5-0fb8-46b9-9318-bb2019953135')
