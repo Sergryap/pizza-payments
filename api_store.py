@@ -140,8 +140,31 @@ def get_pcm_products():
     return response.json()
 
 
+def create_flow(name, description, enabled=True):
+    url = 'https://api.moltin.com/v2/flows'
+    headers = {
+        'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}',
+        'Content-Type': 'application/json'
+    }
+    json_data = {
+        'data': {
+            'type': 'flow',
+            'name': name,
+            'slug': slugify(name),
+            'description': description,
+            'enabled': enabled
+        }
+    }
+    response = requests.post(url=url, headers=headers, json=json_data)
+    response.raise_for_status()
+    return response.json()
+
+
 if __name__ == '__main__':
     env = Env()
     env.read_env()
     check_token()
-
+    print(create_flow(
+        name='branch_addresses',
+        description='Addresses of branches of pizzerias'
+    ))
