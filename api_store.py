@@ -347,6 +347,14 @@ def get_cart_items(reference):
     return response.json()
 
 
+def remove_cart_item(reference, product_id):
+    url = f'https://api.moltin.com/v2/carts/{reference}/items/{product_id}'
+    headers = {'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}'}
+    response = requests.delete(url, headers=headers)
+    response.raise_for_status()
+    return response.json()
+
+
 def add_product_to_cart(product_id, quantity, reference):
     url = f'https://api.moltin.com/v2/carts/{reference}/items'
     headers = {
