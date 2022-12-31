@@ -310,6 +310,24 @@ def get_file(file_id):
     return response.json()
 
 
+def add_product_to_cart(product_id, quantity, reference):
+    url = f'https://api.moltin.com/v2/carts/{reference}/items'
+    headers = {
+        'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}',
+        'Content-Type': 'application/json',
+    }
+    json_data = {
+        'data': {
+            'id': product_id,
+            'type': 'cart_item',
+            'quantity': quantity,
+        }
+    }
+    response = requests.post(url=url, headers=headers, json=json_data)
+    response.raise_for_status()
+    return response.json()
+
+
 if __name__ == '__main__':
     env = Env()
     env.read_env()
