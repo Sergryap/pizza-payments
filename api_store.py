@@ -4,6 +4,7 @@ import requests
 
 from environs import Env
 from slugify import slugify
+from pprint import pprint
 
 
 def check_token(error=False):
@@ -140,7 +141,7 @@ def get_pcm_products():
     return response.json()
 
 
-def create_flow(name, description, enabled=True):
+def create_flow(name, description, enabled=True):  # 'id': '40a7fb8f-fc3b-42be-bd26-c2f3648b96a2'
     url = 'https://api.moltin.com/v2/flows'
     headers = {
         'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}',
@@ -167,12 +168,110 @@ def delete_flow(flow_id):
     response.raise_for_status()
 
 
+def create_field(
+        name,
+        description,
+        field_type,
+        flow_id,
+        order,
+        validation_rules=None,
+        required=True,
+        enabled=True
+):
+    url = 'https://api.moltin.com/v2/fields'
+    headers = {
+        'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}',
+        'Content-Type': 'application/json'
+    }
+    json_data = {
+        'data': {
+            'type': 'field',
+            'name': name,
+            'slug': slugify(name),
+            'field_type': field_type,
+            'description': description,
+            'required': required,
+            'enabled': enabled,
+            'order': order,
+            'relationships': {
+                'flow': {
+                    'data': {
+                        'type': 'flow',
+                        'id': flow_id
+                    }
+                }
+            }
+        }
+    }
+    if validation_rules:
+        json_data['data'].update({'validation_rules': validation_rules})
+    response = requests.post(url=url, headers=headers, json=json_data)
+    response.raise_for_status()
+    return response.json()
+
+
 if __name__ == '__main__':
     env = Env()
     env.read_env()
     check_token()
-    print(create_flow(
-        name='Branch addresses',
-        description='Addresses of branches of pizzerias'
-    ))
+    # pprint(
+    #   create_flow(
+    #       name='Branch addresses',
+    #       description='Addresses of branches of pizzerias'
+    #   )
+    # )
     # delete_flow('63618de5-0fb8-46b9-9318-bb2019953135')
+    # pprint(
+    #     create_field(
+    #         name='Address',
+    #         description='Branch address',
+    #         field_type='string',
+    #         flow_id='40a7fb8f-fc3b-42be-bd26-c2f3648b96a2',
+    #         order=1
+    #     )
+    # )
+    # pprint(
+    #     create_field(
+    #         name='Alias',
+    #         description='Alias of Branch address',
+    #         field_type='string',
+    #         flow_id='40a7fb8f-fc3b-42be-bd26-c2f3648b96a2',
+    #         order=2
+    #     )
+    # )
+    pprint(
+        create_field(
+            name='Longitude',
+            description='Longitude of Branch address',
+            field_type='float',
+            flow_id='40a7fb8f-fc3b-42be-bd26-c2f3648b96a2',
+            order=3,
+            validation_rules=[
+                {
+                    'type': 'between',
+                    'options': {
+                        'from': -180.0,
+                        'to': 180.0
+                    }
+                }
+            ]
+        )
+    )
+    pprint(
+        create_field(
+            name='Latitude',
+            description='Latitude of Branch address',
+            field_type='float',
+            flow_id='40a7fb8f-fc3b-42be-bd26-c2f3648b96a2',
+            order=4,
+            validation_rules=[
+                {
+                    'type': 'between',
+                    'options': {
+                        'from': -90.0,
+                        'to': 90.0
+                    }
+                }
+            ]
+        )
+    )
