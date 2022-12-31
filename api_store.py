@@ -233,6 +233,24 @@ def created_float_fields(flow_id, flows_data):
         )
 
 
+def create_entry(flow_slug, fields_data):
+    url = f'https://api.moltin.com/v2/flows/{flow_slug}/entries'
+    headers = {
+        'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}',
+        'Content-Type': 'application/json'
+    }
+    json_data = {
+        'data': {
+            'type': 'entry'
+        }
+    }
+    for field_slug, field_value in fields_data.items():
+        json_data['data'].update({field_slug: field_value})
+    response = requests.post(url=url, headers=headers, json=json_data)
+    response.raise_for_status()
+    return response.json()
+
+
 if __name__ == '__main__':
     env = Env()
     env.read_env()
