@@ -162,3 +162,17 @@ def handler_cart(update: Update, context: CallbackContext):
         reply_markup=InlineKeyboardMarkup(inline_keyboard=custom_keyboard, resize_keyboard=True)
     )
     return 'HANDLER_CART'
+
+
+def waiting_email(update: Update, context: CallbackContext):
+    email_user = update.message.text
+    try:
+        api.create_customer(update.effective_user.username, email_user)
+    except requests.exceptions.HTTPError:
+        print('Клиент уже существует')
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text='Спасибо. Мы свяжемся с Вами!\nPlease choose:',
+        reply_markup=get_menu_markup()
+    )
+    return 'HANDLE_MENU'
