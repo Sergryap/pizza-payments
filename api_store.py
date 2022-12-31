@@ -210,6 +210,29 @@ def create_field(
     return response.json()
 
 
+def created_string_fields(flow_id, flows_data):
+    for flow_data in flows_data:
+        create_field(
+            name=flow_data['name'],
+            description=flow_data['description'],
+            field_type='string',
+            flow_id=flow_id,
+            order=flow_data['order']
+        )
+
+
+def created_float_fields(flow_id, flows_data):
+    for flow_data in flows_data:
+        create_field(
+            name=flow_data['name'],
+            description=flow_data['description'],
+            field_type='float',
+            flow_id=flow_id,
+            order=flow_data['order'],
+            validation_rules=flow_data['validation_rules']
+        )
+
+
 if __name__ == '__main__':
     env = Env()
     env.read_env()
@@ -239,39 +262,87 @@ if __name__ == '__main__':
     #         order=2
     #     )
     # )
-    pprint(
-        create_field(
-            name='Longitude',
-            description='Longitude of Branch address',
-            field_type='float',
-            flow_id='40a7fb8f-fc3b-42be-bd26-c2f3648b96a2',
-            order=3,
-            validation_rules=[
-                {
-                    'type': 'between',
-                    'options': {
-                        'from': -180.0,
-                        'to': 180.0
-                    }
-                }
-            ]
-        )
+    created_string_fields(
+        flow_id='40a7fb8f-fc3b-42be-bd26-c2f3648b96a2',
+        flows_data=[
+            {
+                'name': 'Address',
+                'description': 'Branch address',
+                'order': 1
+            },
+            {
+                'name': 'Alias',
+                'description': 'Alias of branch address',
+                'order': 2
+            },
+        ]
     )
-    pprint(
-        create_field(
-            name='Latitude',
-            description='Latitude of Branch address',
-            field_type='float',
-            flow_id='40a7fb8f-fc3b-42be-bd26-c2f3648b96a2',
-            order=4,
-            validation_rules=[
-                {
-                    'type': 'between',
-                    'options': {
-                        'from': -90.0,
-                        'to': 90.0
+    created_float_fields(
+        flow_id='40a7fb8f-fc3b-42be-bd26-c2f3648b96a2',
+        flows_data=[
+            {
+                'name': 'Longitude',
+                'description': 'Longitude of branch address',
+                'order': 3,
+                'validation_rules': [
+                    {
+                        'type': 'between',
+                        'options': {
+                            'from': -180.0,
+                            'to': 180.0
+                        }
                     }
-                }
-            ]
-        )
+                ]
+            },
+            {
+                'name': 'Latitude',
+                'description': 'Latitude of branch address',
+                'order': 4,
+                'validation_rules': [
+                    {
+                        'type': 'between',
+                        'options': {
+                            'from': -90.0,
+                            'to': 90.0
+                        }
+                    }
+                ]
+            }
+        ]
     )
+    # pprint(
+    #     create_field(
+    #         name='Longitude',
+    #         description='Longitude of Branch address',
+    #         field_type='float',
+    #         flow_id='40a7fb8f-fc3b-42be-bd26-c2f3648b96a2',
+    #         order=3,
+    #         validation_rules=[
+    #             {
+    #                 'type': 'between',
+    #                 'options': {
+    #                     'from': -180.0,
+    #                     'to': 180.0
+    #                 }
+    #             }
+    #         ]
+    #     )
+    # )
+    # pprint(
+    #     create_field(
+    #         name='Latitude',
+    #         description='Latitude of Branch address',
+    #         field_type='float',
+    #         flow_id='40a7fb8f-fc3b-42be-bd26-c2f3648b96a2',
+    #         order=4,
+    #         validation_rules=[
+    #             {
+    #                 'type': 'between',
+    #                 'options': {
+    #                     'from': -90.0,
+    #                     'to': 90.0
+    #                 }
+    #             }
+    #         ]
+    #     )
+    # )
