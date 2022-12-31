@@ -1,6 +1,7 @@
 import os
 import time
 import requests
+import json
 
 from environs import Env
 from slugify import slugify
@@ -149,6 +150,30 @@ def get_product(product_id):
     return response.json()
 
 
+def create_relationships_to_products(
+        products,
+        hierarchy_id='7a28da5f-9135-47d5-8467-5c37c133febb',
+        node_id='135277f5-71c3-44c2-baed-3cb52a5b64c2'
+):
+    url = f'https://api.moltin.com/pcm/hierarchies/{hierarchy_id}/nodes/{node_id}/relationships/products'
+    headers = {
+        'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}',
+        'Content-Type': 'application/json',
+    }
+    json_data = {'data': []}
+    for product in products['data']:
+        print(product['id'])
+        json_data['data'].append(
+            {
+                'type': 'product',
+                'id': product['id']
+            }
+        )
+    response = requests.post(url, headers=headers, json=json_data)
+    response.raise_for_status()
+    return response.json()
+
+
 def get_pcm_products():
     url = 'https://api.moltin.com/pcm/products'
     headers = {'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}'}
@@ -281,8 +306,9 @@ if __name__ == '__main__':
     env = Env()
     env.read_env()
     check_token()
-    # pprint(get_pcm_products())
-    pprint(get_pcm_price_book(os.environ["PRICE_BOOK_ID"]))
+    all_products = get_pcm_products()
+    pprint(create_relationships_to_products(all_products))
+    # pprint(get_pcm_price_book(os.environ["PRICE_BOOK_ID"]))
     # pprint(
     #   create_flow(
     #       name='Branch addresses',
