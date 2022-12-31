@@ -74,3 +74,18 @@ def send_info_product(update: Update, context: CallbackContext):
     context.bot.delete_message(chat_id, message_id)
 
     return "HANDLE_DESCRIPTION"
+
+
+def handle_description(update: Update, context: CallbackContext):
+    callback_data = update.callback_query.data
+    if callback_data == '/cart':
+        return get_cart_info(update, context)
+    quantity = 1
+    product_id = callback_data
+    api.get_cart(reference=update.effective_user.id)
+    api.add_product_to_cart(
+        product_id=product_id,
+        quantity=quantity,
+        reference=update.effective_user.id
+    )
+    return "HANDLE_DESCRIPTION"
