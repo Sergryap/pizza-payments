@@ -302,12 +302,22 @@ def create_entry(flow_slug, fields_data):
     return response.json()
 
 
+def get_file(file_id):
+    url = f'https://api.moltin.com/v2/files/{file_id}'
+    headers = {'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}'}
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    return response.json()
+
+
 if __name__ == '__main__':
     env = Env()
     env.read_env()
     check_token()
-    all_products = get_pcm_products()
-    pprint(create_relationships_to_products(all_products))
+    # all_products = get_pcm_products()
+    # pprint(create_relationships_to_products(all_products))
+    # pprint(get_products())
+    pprint(get_product('0f7dcda1-79bf-407c-80ea-49d22a1534e4'))
     # pprint(get_pcm_price_book(os.environ["PRICE_BOOK_ID"]))
     # pprint(
     #   create_flow(
