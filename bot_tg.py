@@ -176,3 +176,38 @@ def waiting_email(update: Update, context: CallbackContext):
         reply_markup=get_menu_markup()
     )
     return 'HANDLE_MENU'
+
+
+def handle_users_reply(update: Update, context: CallbackContext):
+
+    db = context.dispatcher.redis
+    if update.message:
+        user_reply = update.message.text
+        chat_id = update.message.chat_id
+    elif update.callback_query:
+        user_reply = update.callback_query.data
+        chat_id = update.callback_query.message.chat_id
+    else:
+        return
+    if user_reply == '/start':
+        user_state = 'START'
+    else:
+        user_state = db.get(chat_id).decode("utf-8")
+
+    states_functions = {
+        'START': start,
+        'HANDLE_MENU': send_info_product,
+        'HANDLE_DESCRIPTION': handle_description,
+        'CART_INFO': get_cart_info,
+        'HANDLER_CART':  handler_cart,
+        'WAITING_EMAIL': waiting_email
+    }
+    state_handler = states_functions[user_state]
+    api.check_token()
+    try:
+        next_state = state_handler(update, context)
+    except Exception as err:
+        api.check_token(error=True)
+        next_state = state_handler(update, context)
+        print(err)
+    db.set(chat_id, next_state)
