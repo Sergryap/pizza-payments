@@ -337,6 +337,16 @@ def get_cart(reference):
     return response.json()
 
 
+def get_cart_items(reference):
+    url = f'https://api.moltin.com/v2/carts/{reference}/items'
+    headers = {
+        'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}',
+    }
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    return response.json()
+
+
 def add_product_to_cart(product_id, quantity, reference):
     url = f'https://api.moltin.com/v2/carts/{reference}/items'
     headers = {
