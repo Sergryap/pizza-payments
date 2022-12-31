@@ -373,6 +373,27 @@ def add_product_to_cart(product_id, quantity, reference):
     return response.json()
 
 
+def create_customer(name, email, password=None):
+    url = 'https://api.moltin.com/v2/customers'
+    headers = {
+        'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}',
+        'Content-Type': 'application/json'
+    }
+
+    data = {
+        'type': 'customer',
+        'name': name,
+        'email': email,
+        'password': password,
+    }
+    json_data = {
+        'data': {key: value for key, value in data.items() if value is not None}
+    }
+    response = requests.post(url, headers=headers, json=json_data)
+    response.raise_for_status()
+    return response.json()
+
+
 if __name__ == '__main__':
     env = Env()
     env.read_env()
