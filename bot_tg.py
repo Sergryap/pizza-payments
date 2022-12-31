@@ -211,3 +211,26 @@ def handle_users_reply(update: Update, context: CallbackContext):
         next_state = state_handler(update, context)
         print(err)
     db.set(chat_id, next_state)
+
+
+if __name__ == '__main__':
+    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+    env = Env()
+    env.read_env()
+
+    token = env('TELEGRAM_TOKEN')
+    database_password = env('DATABASE_PASSWORD')
+    database_host = env('DATABASE_HOST')
+    database_port = env('DATABASE_PORT')
+    updater = Updater(token)
+    updater.logger.addHandler(BotLogsHandler(
+        token=env('TELEGRAM_TOKEN_LOG'),
+        chat_id=env('CHAT_ID_LOG')
+    ))
+    dispatcher = updater.dispatcher
+    dispatcher.redis = redis.Redis(host=database_host, port=database_port, password=database_password)
+    updater.logger.warning('Бот Telegram "fish-shop" запущен')
+    dispatcher.add_handler(CallbackQueryHandler(handle_users_reply))
+    dispatcher.add_handler(MessageHandler(Filters.text, handle_users_reply))
+    dispatcher.add_handler(CommandHandler('start', handle_users_reply))
+    updater.start_polling()
