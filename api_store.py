@@ -133,10 +133,36 @@ def create_main_image_relationship(product_id, image_id):
     response.raise_for_status()
 
 
+def get_products():
+    url = 'https://api.moltin.com/catalog/products'
+    headers = {'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}'}
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    return response.json()
+
+
+def get_product(product_id):
+    url = f'https://api.moltin.com/catalog/products/{product_id}'
+    headers = {'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}'}
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    return response.json()
+
+
 def get_pcm_products():
     url = 'https://api.moltin.com/pcm/products'
     headers = {'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}'}
-    response = requests.get(url, headers=headers)
+    params = {'include': 'component_products'}
+    response = requests.get(url, headers=headers, params=params)
+    response.raise_for_status()
+    return response.json()
+
+
+def get_pcm_price_book(price_book_id):
+    url = f'https://api.moltin.com/pcm/pricebooks/{price_book_id}'
+    headers = {'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}'}
+    params = {'include': 'prices'}
+    response = requests.get(url, headers=headers, params=params)
     response.raise_for_status()
     return response.json()
 
@@ -255,6 +281,8 @@ if __name__ == '__main__':
     env = Env()
     env.read_env()
     check_token()
+    # pprint(get_pcm_products())
+    pprint(get_pcm_price_book(os.environ["PRICE_BOOK_ID"]))
     # pprint(
     #   create_flow(
     #       name='Branch addresses',
@@ -280,54 +308,54 @@ if __name__ == '__main__':
     #         order=2
     #     )
     # )
-    created_string_fields(
-        flow_id='40a7fb8f-fc3b-42be-bd26-c2f3648b96a2',
-        flows_data=[
-            {
-                'name': 'Address',
-                'description': 'Branch address',
-                'order': 1
-            },
-            {
-                'name': 'Alias',
-                'description': 'Alias of branch address',
-                'order': 2
-            },
-        ]
-    )
-    created_float_fields(
-        flow_id='40a7fb8f-fc3b-42be-bd26-c2f3648b96a2',
-        flows_data=[
-            {
-                'name': 'Longitude',
-                'description': 'Longitude of branch address',
-                'order': 3,
-                'validation_rules': [
-                    {
-                        'type': 'between',
-                        'options': {
-                            'from': -180.0,
-                            'to': 180.0
-                        }
-                    }
-                ]
-            },
-            {
-                'name': 'Latitude',
-                'description': 'Latitude of branch address',
-                'order': 4,
-                'validation_rules': [
-                    {
-                        'type': 'between',
-                        'options': {
-                            'from': -90.0,
-                            'to': 90.0
-                        }
-                    }
-                ]
-            }
-        ]
-    )
+    # created_string_fields(
+    #     flow_id='40a7fb8f-fc3b-42be-bd26-c2f3648b96a2',
+    #     flows_data=[
+    #         {
+    #             'name': 'Address',
+    #             'description': 'Branch address',
+    #             'order': 1
+    #         },
+    #         {
+    #             'name': 'Alias',
+    #             'description': 'Alias of branch address',
+    #             'order': 2
+    #         },
+    #     ]
+    # )
+    # created_float_fields(
+    #     flow_id='40a7fb8f-fc3b-42be-bd26-c2f3648b96a2',
+    #     flows_data=[
+    #         {
+    #             'name': 'Longitude',
+    #             'description': 'Longitude of branch address',
+    #             'order': 3,
+    #             'validation_rules': [
+    #                 {
+    #                     'type': 'between',
+    #                     'options': {
+    #                         'from': -180.0,
+    #                         'to': 180.0
+    #                     }
+    #                 }
+    #             ]
+    #         },
+    #         {
+    #             'name': 'Latitude',
+    #             'description': 'Latitude of branch address',
+    #             'order': 4,
+    #             'validation_rules': [
+    #                 {
+    #                     'type': 'between',
+    #                     'options': {
+    #                         'from': -90.0,
+    #                         'to': 90.0
+    #                     }
+    #                 }
+    #             ]
+    #         }
+    #     ]
+    # )
     # pprint(
     #     create_field(
     #         name='Longitude',
