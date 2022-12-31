@@ -37,8 +37,25 @@ def upload_products(file='menu.json'):
             continue
 
 
+def upload_addresses(file='addresses.json', flow_slug='branch-addresses'):
+    addresses = upload_file(file)
+    for address in addresses:
+        fields_data = {
+            'address': address['address']['full'],
+            'alias': address['alias'],
+            'longitude': float(address['coordinates']['lon']),
+            'latitude': float(address['coordinates']['lat'])
+        }
+        print(f'Загружаю данные для {address["address"]["full"]}')
+        try:
+            api.create_entry(flow_slug, fields_data)
+        except requests.exceptions.HTTPError:
+            continue
+
+
 if __name__ == '__main__':
     env = Env()
     env.read_env()
     api.check_token()
-    upload_products()
+    # upload_products()
+    upload_addresses()
