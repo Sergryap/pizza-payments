@@ -1,7 +1,6 @@
 import os
 import time
 import requests
-import json
 
 from environs import Env
 from slugify import slugify
@@ -23,7 +22,6 @@ def check_token(error=False):
         token_data = response.json()
         os.environ['TOKEN_EXPIRES'] = str(token_data['expires'] - 60)
         os.environ['ACCESS_TOKEN'] = token_data['access_token']
-        print(token_data)
 
 
 def create_product(name: str, sku: str, description: str, price: int):
