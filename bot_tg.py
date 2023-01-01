@@ -14,6 +14,7 @@ logger = logging.getLogger('telegram_logging')
 
 MENU_TEXT = 'Пожалуйста выберите:'
 THANK_TEXT = 'Спасибо. Мы свяжемся с Вами!'
+NONE_CART_TEXT = 'Нет в корзине'
 
 
 def get_menu_markup(start_product=0, offset_products=10, number_items=2):
@@ -71,11 +72,14 @@ def send_info_product(update: Update, context: CallbackContext):
     description = product_data['data']['attributes'].get('description', 'Описание не задано')
     main_image_id = product_data['data']['relationships']['main_image']['data']['id']
     link_image = api.get_file(file_id=main_image_id)['data']['link']['href']
-
+    cart_items = api.get_cart_items(update.effective_user.id)
+    quantity = [item['quantity'] for item in cart_items['data'] if item['product_id'] == product_id]
+    quantity_msg = f'В корзине: {quantity[0]} шт.' if quantity else NONE_CART_TEXT
     msg = f'''
-        {name}
-        {price}
+        <b>{name}</b>
+        <i>{price}</i>
         {description}
+        <i>{quantity_msg}</i>
         '''
     custom_keyboard = [
         [InlineKeyboardButton('Положить в корзину', callback_data=f'{product_id}:{price}')],
@@ -86,7 +90,8 @@ def send_info_product(update: Update, context: CallbackContext):
         chat_id,
         photo=link_image,
         caption=dedent(msg),
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=custom_keyboard, resize_keyboard=True)
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=custom_keyboard, resize_keyboard=True),
+        parse_mode=PARSEMODE_HTML
     )
     context.bot.delete_message(chat_id, message_id)
 
@@ -134,7 +139,7 @@ def get_cart_info(update: Update, context: CallbackContext):
         <i>{item['quantity']}шт. за {item['meta']['display_price']['without_tax']['value']['formatted']}</i>
         '''
         custom_keyboard.append(
-            [InlineKeyboardButton(f'Убрать из корзины {item["name"]}', callback_data=item['id'])]
+            [InlineKeyboardButton(f'Убрать из корзины: {item["name"]}', callback_data=item['id'])]
         )
     custom_keyboard.append([InlineKeyboardButton('Меню', callback_data='/start')])
     custom_keyboard.append([InlineKeyboardButton('Оплата', callback_data='/pay')])
