@@ -17,7 +17,7 @@ THANK_TEXT = 'Спасибо. Мы свяжемся с Вами!'
 NONE_CART_TEXT = 'Нет в корзине'
 
 
-def get_menu_markup(start_product=0, offset_products=10, number_line_buttons=2):
+def get_main_menu(start_product=0, offset_products=10, number_line_buttons=2):
     products = api.get_products()['data']
     end_index = min(start_product + offset_products, len(products))
     displayed_products = products[start_product: end_index]
@@ -46,7 +46,7 @@ def start(update: Update, context: CallbackContext):
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=MENU_TEXT,
-        reply_markup=get_menu_markup()
+        reply_markup=get_main_menu()
     )
 
     return "HANDLE_MENU"
@@ -61,7 +61,7 @@ def send_info_product(update: Update, context: CallbackContext):
             chat_id=update.effective_chat.id,
             message_id=update.effective_message.message_id,
             text=MENU_TEXT,
-            reply_markup=get_menu_markup(start_product)
+            reply_markup=get_main_menu(start_product)
         )
         return "HANDLE_MENU"
     message_id = update.effective_message.message_id
@@ -218,7 +218,7 @@ def waiting_email(update: Update, context: CallbackContext):
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=f'{THANK_TEXT}\n{MENU_TEXT}',
-        reply_markup=get_menu_markup()
+        reply_markup=get_main_menu()
     )
     return 'HANDLE_MENU'
 
