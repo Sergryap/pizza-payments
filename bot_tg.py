@@ -42,10 +42,10 @@ def send_info_product(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
     product_id = update.callback_query.data
     product_data = api.get_product(product_id)
-    name = product_data['attributes']['name']
-    price = product_data['meta']['display_price']['with_tax']['formatted']
-    description = product_data['attributes'].get('description', 'Описание не задано')
-    main_image_id = product_data['relationships']['main_image']['data']['id']
+    name = product_data['data']['attributes']['name']
+    price = product_data['data']['meta']['display_price']['with_tax']['formatted']
+    description = product_data['data']['attributes'].get('description', 'Описание не задано')
+    main_image_id = product_data['data']['relationships']['main_image']['data']['id']
     link_image = api.get_file(file_id=main_image_id)['data']['link']['href']
 
     msg = f'''
@@ -54,16 +54,9 @@ def send_info_product(update: Update, context: CallbackContext):
         {description}
         '''
     custom_keyboard = [
-        [
-            InlineKeyboardButton('Положить в корзину', callback_data=product_id),
-        ],
-        [
-            InlineKeyboardButton('Корзина', callback_data='/cart')
-        ],
-        [
-            InlineKeyboardButton('Меню', callback_data='/start')
-        ],
-
+        [InlineKeyboardButton('Положить в корзину', callback_data=f'{product_id}:{price}')],
+        [InlineKeyboardButton('Корзина', callback_data='/cart')],
+        [InlineKeyboardButton('Меню', callback_data='/start')],
     ]
     context.bot.send_photo(
         chat_id,
@@ -80,13 +73,23 @@ def handle_description(update: Update, context: CallbackContext):
     callback_data = update.callback_query.data
     if callback_data == '/cart':
         return get_cart_info(update, context)
-    quantity = 1
-    product_id = callback_data
+    product_info = callback_data.split(':')
+    product_id = product_info[0]
+    product_price = product_info[1]
     api.get_cart(reference=update.effective_user.id)
     api.add_product_to_cart(
         product_id=product_id,
-        quantity=quantity,
+        quantity=1,
         reference=update.effective_user.id
+    )
+    answer_callback_query_text = f'''
+    Добавлено в корзину
+    по цене {product_price} за 1 шт.
+    '''
+    context.bot.answer_callback_query(
+        update.callback_query.id,
+        text=dedent(answer_callback_query_text),
+        show_alert=True
     )
     return "HANDLE_DESCRIPTION"
 
@@ -203,8 +206,8 @@ def handle_users_reply(update: Update, context: CallbackContext):
         'WAITING_EMAIL': waiting_email
     }
     state_handler = states_functions[user_state]
-    api.check_token()
     try:
+        api.check_token()
         next_state = state_handler(update, context)
     except Exception as err:
         api.check_token(error=True)
@@ -217,6 +220,7 @@ if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
     env = Env()
     env.read_env()
+    api.check_token()
 
     token = env('TELEGRAM_TOKEN')
     database_password = env('DATABASE_PASSWORD')
@@ -229,7 +233,7 @@ if __name__ == '__main__':
     ))
     dispatcher = updater.dispatcher
     dispatcher.redis = redis.Redis(host=database_host, port=database_port, password=database_password)
-    updater.logger.warning('Бот Telegram "fish-shop" запущен')
+    updater.logger.warning('Бот Telegram "pizza-payments" запущен')
     dispatcher.add_handler(CallbackQueryHandler(handle_users_reply))
     dispatcher.add_handler(MessageHandler(Filters.text, handle_users_reply))
     dispatcher.add_handler(CommandHandler('start', handle_users_reply))
