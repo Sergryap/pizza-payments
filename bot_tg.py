@@ -7,6 +7,7 @@ from environs import Env
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Filters, Updater, CallbackContext
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
+from telegram.constants import PARSEMODE_HTML
 
 from logger import BotLogsHandler
 logger = logging.getLogger('telegram_logging')
@@ -127,10 +128,10 @@ def get_cart_info(update: Update, context: CallbackContext):
     custom_keyboard = []
     for item in cart_items['data']:
         msg += f'''
-        {item['name']}
+        <b>{item['name']}</b>
         {item['description']}
         {item['meta']['display_price']['without_tax']['unit']['formatted']}
-        {item['quantity']}шт. за {item['meta']['display_price']['without_tax']['value']['formatted']}
+        <i>{item['quantity']}шт. за {item['meta']['display_price']['without_tax']['value']['formatted']}</i>
         '''
         custom_keyboard.append(
             [InlineKeyboardButton(f'Убрать из корзины {item["name"]}', callback_data=item['id'])]
@@ -139,12 +140,13 @@ def get_cart_info(update: Update, context: CallbackContext):
     custom_keyboard.append([InlineKeyboardButton('Оплата', callback_data='/pay')])
     msg = f'''
         {msg}        
-        Total: {total_value}
+        <b>Общая стоимость: {total_value}</b>
         '''
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=dedent(msg),
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=custom_keyboard, resize_keyboard=True)
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=custom_keyboard, resize_keyboard=True),
+        parse_mode=PARSEMODE_HTML
     )
 
     return 'HANDLER_CART'
