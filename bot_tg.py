@@ -48,6 +48,7 @@ def start(update: Update, context: CallbackContext):
         text=MENU_TEXT,
         reply_markup=get_menu_markup()
     )
+
     return "HANDLE_MENU"
 
 
@@ -120,10 +121,11 @@ def handle_description(update: Update, context: CallbackContext):
         text=dedent(answer_callback_query_text),
         show_alert=True
     )
+
     return "HANDLE_DESCRIPTION"
 
 
-def get_cart_info(update: Update, context: CallbackContext):
+def create_cart_msg(update: Update):
     total_value = (
         api.get_cart(update.effective_user.id)
         ['data']['meta']['display_price']['without_tax']['formatted']
@@ -133,20 +135,25 @@ def get_cart_info(update: Update, context: CallbackContext):
     custom_keyboard = []
     for item in cart_items['data']:
         msg += f'''
-        <b>{item['name']}</b>
-        {item['description']}
-        {item['meta']['display_price']['without_tax']['unit']['formatted']}
-        <i>{item['quantity']}шт. за {item['meta']['display_price']['without_tax']['value']['formatted']}</i>
-        '''
+            <b>{item['name']}</b>
+            {item['description']}
+            {item['meta']['display_price']['without_tax']['unit']['formatted']}
+            <i>{item['quantity']}шт. за {item['meta']['display_price']['without_tax']['value']['formatted']}</i>
+            '''
         custom_keyboard.append(
             [InlineKeyboardButton(f'Убрать из корзины: {item["name"]}', callback_data=item['id'])]
         )
     custom_keyboard.append([InlineKeyboardButton('Меню', callback_data='/start')])
     custom_keyboard.append([InlineKeyboardButton('Оплата', callback_data='/pay')])
     msg = f'''
-        {msg}        
-        <b>Общая стоимость: {total_value}</b>
-        '''
+            {msg}        
+            <b>Общая стоимость: {total_value}</b>
+            '''
+    return msg, custom_keyboard
+
+
+def get_cart_info(update: Update, context: CallbackContext):
+    msg, custom_keyboard = create_cart_msg(update)
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=dedent(msg),
@@ -166,33 +173,13 @@ def handler_cart(update: Update, context: CallbackContext):
         return 'WAITING_EMAIL'
     id_cart_item = update.callback_query.data
     api.remove_cart_item(update.effective_user.id, id_cart_item)
-    total_value = (
-        api.get_cart(update.effective_user.id)
-        ['data']['meta']['display_price']['without_tax']['formatted']
-    )
-    cart_items = api.get_cart_items(update.effective_user.id)
-    msg = ''
-    custom_keyboard = []
-    for item in cart_items['data']:
-        msg += f'''
-            {item['name']}
-            {item['description']}
-            {item['meta']['display_price']['without_tax']['unit']['formatted']}
-            {item['quantity']}шт. за {item['meta']['display_price']['without_tax']['value']['formatted']}
-            '''
-        custom_keyboard.append(
-            [InlineKeyboardButton(f'Убрать из корзины {item["name"]}', callback_data=item['id'])]
-        )
-    custom_keyboard.append([InlineKeyboardButton('Меню', callback_data='/start')])
-    msg = f'''
-            {msg}        
-            Total: {total_value}
-            '''
+    msg, custom_keyboard = create_cart_msg(update)
     context.bot.edit_message_text(
         chat_id=update.effective_chat.id,
         message_id=update.effective_message.message_id,
         text=dedent(msg),
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=custom_keyboard, resize_keyboard=True)
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=custom_keyboard, resize_keyboard=True),
+        parse_mode=PARSEMODE_HTML
     )
     return 'HANDLER_CART'
 
