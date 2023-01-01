@@ -42,6 +42,20 @@ def get_main_menu(start_product=0, offset_products=10, number_line_buttons=2):
     )
 
 
+def get_product_info_menu(product_id, price):
+    custom_keyboard = [
+        [InlineKeyboardButton('Добавить в корзину', callback_data=f'{product_id}:{price}')],
+        [
+            InlineKeyboardButton('Корзина', callback_data='/cart'),
+            InlineKeyboardButton('Меню', callback_data='/start')
+        ]
+    ]
+    return InlineKeyboardMarkup(
+        inline_keyboard=custom_keyboard,
+        resize_keyboard=True
+    )
+
+
 def start(update: Update, context: CallbackContext):
     context.bot.send_message(
         chat_id=update.effective_chat.id,
@@ -81,13 +95,6 @@ def send_product_info(update: Update, context: CallbackContext):
         <i>{price}</i>
         {description}
         '''
-    custom_keyboard = [
-        [InlineKeyboardButton('Положить в корзину', callback_data=f'{product_id}:{price}')],
-        [
-            InlineKeyboardButton('Корзина', callback_data='/cart'),
-            InlineKeyboardButton('Меню', callback_data='/start')
-        ]
-    ]
     context.bot.send_photo(
         chat_id,
         photo=link_image,
@@ -97,7 +104,7 @@ def send_product_info(update: Update, context: CallbackContext):
     context.bot.send_message(
         chat_id,
         text=quantity_msg,
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=custom_keyboard, resize_keyboard=True),
+        reply_markup=get_product_info_menu(product_id, price),
         parse_mode=PARSEMODE_HTML
     )
     context.bot.delete_message(chat_id, message_id)
@@ -127,18 +134,11 @@ def handle_description(update: Update, context: CallbackContext):
         Добавлено в корзину
         по цене {price} за 1 шт.
         '''
-    custom_keyboard = [
-        [InlineKeyboardButton('Положить в корзину', callback_data=f'{product_id}:{price}')],
-        [
-            InlineKeyboardButton('Корзина', callback_data='/cart'),
-            InlineKeyboardButton('Меню', callback_data='/start')
-        ]
-    ]
     context.bot.edit_message_text(
         chat_id=update.effective_chat.id,
         message_id=update.effective_message.message_id,
         text=msg,
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=custom_keyboard, resize_keyboard=True),
+        reply_markup=get_product_info_menu(product_id, price),
         parse_mode=PARSEMODE_HTML
     )
     context.bot.answer_callback_query(
