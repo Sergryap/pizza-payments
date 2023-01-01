@@ -12,6 +12,7 @@ from logger import BotLogsHandler
 logger = logging.getLogger('telegram_logging')
 
 MENU_TEXT = 'Пожалуйста выберите:'
+THANK_TEXT = 'Спасибо. Мы свяжемся с Вами!'
 
 
 def get_menu_markup(start_product=0, offset_products=10, number_items=2):
@@ -197,7 +198,7 @@ def waiting_email(update: Update, context: CallbackContext):
         print('Клиент уже существует')
     context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text=f'Спасибо. Мы свяжемся с Вами!\n{MENU_TEXT}',
+        text=f'{THANK_TEXT}\n{MENU_TEXT}',
         reply_markup=get_menu_markup()
     )
     return 'HANDLE_MENU'
