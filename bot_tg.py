@@ -32,8 +32,8 @@ def get_main_menu(start_product=0, offset_products=10, number_line_buttons=2):
     previous_index = start_product - offset_products
     previous_product = previous_index if previous_index >= 0 else len(products) - offset_products
     custom_keyboard.append([
-        InlineKeyboardButton('<<<', callback_data=previous_product),
-        InlineKeyboardButton('>>>', callback_data=next_product)
+        InlineKeyboardButton('<<<   Назад', callback_data=previous_product),
+        InlineKeyboardButton('Вперед   >>>', callback_data=next_product)
     ])
     custom_keyboard.append([InlineKeyboardButton('Корзина', callback_data='/cart')])
     return InlineKeyboardMarkup(
@@ -163,7 +163,7 @@ def create_cart_msg(update: Update):
             <b>{item['name']}</b>
             {item['description']}
             {item['meta']['display_price']['without_tax']['unit']['formatted']}
-            <i>{item['quantity']}шт. за {item['meta']['display_price']['without_tax']['value']['formatted']}</i>
+            <i>{item['quantity']} шт. за {item['meta']['display_price']['without_tax']['value']['formatted']}</i>
             '''
         custom_keyboard.append(
             [InlineKeyboardButton(f'Убрать из корзины: {item["name"]}', callback_data=item['id'])]
