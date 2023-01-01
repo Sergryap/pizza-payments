@@ -11,24 +11,21 @@ from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 from logger import BotLogsHandler
 logger = logging.getLogger('telegram_logging')
 
-OFFSET_PRODUCTS = 10
-NUMBER_ITEMS_LINE = 2
 
-
-def get_menu_markup(start_product=0):
+def get_menu_markup(start_product=0, offset_products=10, number_items=2):
     products = api.get_products()['data']
-    end_index = min(start_product + OFFSET_PRODUCTS, len(products))
+    end_index = min(start_product + offset_products, len(products))
     displayed_products = products[start_product: end_index]
     custom_keyboard = []
     button_line = []
     for number, product in enumerate(displayed_products, start=1):
         button_line.append(InlineKeyboardButton(product['attributes']['name'], callback_data=product['id']))
-        if len(button_line) == NUMBER_ITEMS_LINE or len(button_line) == 1 and number == len(displayed_products):
+        if len(button_line) == number_items or len(button_line) == 1 and number == len(displayed_products):
             custom_keyboard.append(button_line)
             button_line = []
     next_product = end_index if len(products) > end_index else 0
-    previous_index = start_product - OFFSET_PRODUCTS
-    previous_product = previous_index if previous_index >= 0 else len(products) - OFFSET_PRODUCTS
+    previous_index = start_product - offset_products
+    previous_product = previous_index if previous_index >= 0 else len(products) - offset_products
     custom_keyboard.append([
         InlineKeyboardButton('<<<', callback_data=previous_product),
         InlineKeyboardButton('>>>', callback_data=next_product)
