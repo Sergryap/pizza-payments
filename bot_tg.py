@@ -75,22 +75,28 @@ def send_info_product(update: Update, context: CallbackContext):
     link_image = api.get_file(file_id=main_image_id)['data']['link']['href']
     cart_items = api.get_cart_items(update.effective_user.id)
     quantity = [item['quantity'] for item in cart_items['data'] if item['product_id'] == product_id]
-    quantity_msg = f'В корзине: {quantity[0]} шт.' if quantity else NONE_CART_TEXT
+    quantity_msg = f'<b>В корзине: {quantity[0]} шт.</b>' if quantity else NONE_CART_TEXT
     msg = f'''
         <b>{name}</b>
         <i>{price}</i>
         {description}
-        <i>{quantity_msg}</i>
         '''
     custom_keyboard = [
         [InlineKeyboardButton('Положить в корзину', callback_data=f'{product_id}:{price}')],
-        [InlineKeyboardButton('Корзина', callback_data='/cart')],
-        [InlineKeyboardButton('Меню', callback_data='/start')],
+        [
+            InlineKeyboardButton('Корзина', callback_data='/cart'),
+            InlineKeyboardButton('Меню', callback_data='/start')
+        ]
     ]
     context.bot.send_photo(
         chat_id,
         photo=link_image,
         caption=dedent(msg),
+        parse_mode=PARSEMODE_HTML
+    )
+    context.bot.send_message(
+        chat_id,
+        text=quantity_msg,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=custom_keyboard, resize_keyboard=True),
         parse_mode=PARSEMODE_HTML
     )
@@ -103,19 +109,38 @@ def handle_description(update: Update, context: CallbackContext):
     callback_data = update.callback_query.data
     if callback_data == '/cart':
         return get_cart_info(update, context)
+    previous_msg = update.effective_message.text
     product_info = callback_data.split(':')
     product_id = product_info[0]
-    product_price = product_info[1]
-    api.get_cart(reference=update.effective_user.id)
+    price = product_info[1]
     api.add_product_to_cart(
         product_id=product_id,
         quantity=1,
         reference=update.effective_user.id
     )
+    if previous_msg == NONE_CART_TEXT:
+        msg = '<b>В корзине: 1 шт.</b>'
+    else:
+        quantity = int(previous_msg.split()[2])
+        msg = f'<b>В корзине: {quantity + 1} шт.</b>'
     answer_callback_query_text = f'''
-    Добавлено в корзину
-    по цене {product_price} за 1 шт.
-    '''
+        Добавлено в корзину
+        по цене {price} за 1 шт.
+        '''
+    custom_keyboard = [
+        [InlineKeyboardButton('Положить в корзину', callback_data=f'{product_id}:{price}')],
+        [
+            InlineKeyboardButton('Корзина', callback_data='/cart'),
+            InlineKeyboardButton('Меню', callback_data='/start')
+        ]
+    ]
+    context.bot.edit_message_text(
+        chat_id=update.effective_chat.id,
+        message_id=update.effective_message.message_id,
+        text=msg,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=custom_keyboard, resize_keyboard=True),
+        parse_mode=PARSEMODE_HTML
+    )
     context.bot.answer_callback_query(
         update.callback_query.id,
         text=dedent(answer_callback_query_text),
