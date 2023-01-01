@@ -17,7 +17,7 @@ THANK_TEXT = 'Спасибо. Мы свяжемся с Вами!'
 NONE_CART_TEXT = 'Нет в корзине'
 
 
-def get_menu_markup(start_product=0, offset_products=10, number_items=2):
+def get_menu_markup(start_product=0, offset_products=10, number_line_buttons=2):
     products = api.get_products()['data']
     end_index = min(start_product + offset_products, len(products))
     displayed_products = products[start_product: end_index]
@@ -25,7 +25,7 @@ def get_menu_markup(start_product=0, offset_products=10, number_items=2):
     button_line = []
     for number, product in enumerate(displayed_products, start=1):
         button_line.append(InlineKeyboardButton(product['attributes']['name'], callback_data=product['id']))
-        if len(button_line) == number_items or len(button_line) == 1 and number == len(displayed_products):
+        if len(button_line) == number_line_buttons or len(button_line) == 1 and number == len(displayed_products):
             custom_keyboard.append(button_line)
             button_line = []
     next_product = end_index if len(products) > end_index else 0
