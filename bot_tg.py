@@ -11,6 +11,8 @@ from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 from logger import BotLogsHandler
 logger = logging.getLogger('telegram_logging')
 
+MENU_TEXT = 'Пожалуйста выберите:'
+
 
 def get_menu_markup(start_product=0, offset_products=10, number_items=2):
     products = api.get_products()['data']
@@ -40,7 +42,7 @@ def get_menu_markup(start_product=0, offset_products=10, number_items=2):
 def start(update: Update, context: CallbackContext):
     context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text='Please choose:',
+        text=MENU_TEXT,
         reply_markup=get_menu_markup()
     )
     return "HANDLE_MENU"
@@ -54,7 +56,7 @@ def send_info_product(update: Update, context: CallbackContext):
         context.bot.edit_message_text(
             chat_id=update.effective_chat.id,
             message_id=update.effective_message.message_id,
-            text='Please choose:',
+            text=MENU_TEXT,
             reply_markup=get_menu_markup(start_product)
         )
         return "HANDLE_MENU"
@@ -195,7 +197,7 @@ def waiting_email(update: Update, context: CallbackContext):
         print('Клиент уже существует')
     context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text='Спасибо. Мы свяжемся с Вами!\nPlease choose:',
+        text=f'Спасибо. Мы свяжемся с Вами!\n{MENU_TEXT}',
         reply_markup=get_menu_markup()
     )
     return 'HANDLE_MENU'
