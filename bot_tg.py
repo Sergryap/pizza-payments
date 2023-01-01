@@ -52,7 +52,7 @@ def start(update: Update, context: CallbackContext):
     return "HANDLE_MENU"
 
 
-def send_info_product(update: Update, context: CallbackContext):
+def send_product_info(update: Update, context: CallbackContext):
     if update.callback_query.data == '/cart':
         return get_cart_info(update, context)
     if update.callback_query.data.isdigit():
@@ -241,7 +241,7 @@ def handle_users_reply(update: Update, context: CallbackContext):
 
     states_functions = {
         'START': start,
-        'HANDLE_MENU': send_info_product,
+        'HANDLE_MENU': send_product_info,
         'HANDLE_DESCRIPTION': handle_description,
         'CART_INFO': get_cart_info,
         'HANDLER_CART':  handler_cart,
