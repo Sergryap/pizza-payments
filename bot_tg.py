@@ -15,9 +15,17 @@ logger = logging.getLogger('telegram_logging')
 MENU_TEXT = 'Пожалуйста выберите:'
 THANK_TEXT = 'Спасибо. Мы свяжемся с Вами!'
 NONE_CART_TEXT = 'Нет в корзине'
+GEO_REQUEST_TEXT = '<b>Для доставки вашего заказа пришлите нам ваш адрес текстом или геолокацию</b>'
+OTHER_MENU_TEXT = '<i>Либо продолжите выбор:</i>'
 
 
-def get_main_menu(start_product=0, offset_products=10, number_line_buttons=2):
+def get_main_menu(start_product=0, offset_products=10, number_line_buttons=2, restart=False):
+    if restart:
+        custom_keyboard = [[InlineKeyboardButton('Продолжить выбор', callback_data='/start')]]
+        return InlineKeyboardMarkup(
+            inline_keyboard=custom_keyboard,
+            resize_keyboard=True
+        )
     products = api.get_products()['data']
     end_index = min(start_product + offset_products, len(products))
     displayed_products = products[start_product: end_index]
@@ -217,8 +225,9 @@ def handle_waiting(update: Update, context: CallbackContext):
         print('Клиент уже существует')
     context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text=f'{THANK_TEXT}\n{MENU_TEXT}',
-        reply_markup=get_main_menu()
+        text=f'{THANK_TEXT}\n{GEO_REQUEST_TEXT}\n{OTHER_MENU_TEXT}',
+        reply_markup=get_main_menu(restart=True),
+        parse_mode=PARSEMODE_HTML
     )
     return 'HANDLE_MENU'
 
