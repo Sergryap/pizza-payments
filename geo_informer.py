@@ -23,18 +23,15 @@ def fetch_coordinates(apikey, address):
 
 
 def get_min_distance_branch(client_pos):
-    if client_pos:
-        branches = get_all_entries()
-        branch_distances = []
-        for branch in branches['data']:
-            branch_pos = (branch['latitude'], branch['longitude'])
-            dist = distance.distance(client_pos, branch_pos).km
-            branch_distances.append(
-                {'address': branch['address'], 'dist': dist}
-            )
-        branch_distances.sort(key=lambda x: x['dist'])
-        selected_branch = branch_distances[0]
+    branches = get_all_entries()
+    branch_distances = []
+    for branch in branches['data']:
+        branch_pos = (branch['latitude'], branch['longitude'])
+        dist = distance.distance(client_pos, branch_pos).km
+        branch_distances.append(
+            {'address': branch['address'], 'dist': dist}
+        )
+    branch_distances.sort(key=lambda x: x['dist'])
+    selected_branch = branch_distances[0]
 
-        return selected_branch['address'], selected_branch['dist']
-    return None, None
-
+    return selected_branch['address'], selected_branch['dist']
