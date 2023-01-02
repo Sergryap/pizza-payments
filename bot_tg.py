@@ -195,7 +195,7 @@ def handler_cart(update: Update, context: CallbackContext):
             chat_id=update.effective_chat.id,
             text='Введите ваш email',
         )
-        return 'WAITING_EMAIL'
+        return 'HANDLE_WAITING'
     id_cart_item = update.callback_query.data
     api.remove_cart_item(update.effective_user.id, id_cart_item)
     msg, custom_keyboard = create_cart_msg(update)
@@ -209,7 +209,7 @@ def handler_cart(update: Update, context: CallbackContext):
     return 'HANDLER_CART'
 
 
-def waiting_email(update: Update, context: CallbackContext):
+def handle_waiting(update: Update, context: CallbackContext):
     email_user = update.message.text
     try:
         api.create_customer(update.effective_user.username, email_user)
@@ -245,7 +245,7 @@ def handle_users_reply(update: Update, context: CallbackContext):
         'HANDLE_DESCRIPTION': handle_description,
         'CART_INFO': get_cart_info,
         'HANDLER_CART':  handler_cart,
-        'WAITING_EMAIL': waiting_email
+        'HANDLE_WAITING': handle_waiting
     }
     state_handler = states_functions[user_state]
     try:
