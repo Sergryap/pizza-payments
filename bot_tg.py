@@ -17,6 +17,7 @@ THANK_TEXT = 'Спасибо. Мы свяжемся с Вами!'
 NONE_CART_TEXT = 'Нет в корзине'
 GEO_REQUEST_TEXT = '<b>Для доставки вашего заказа пришлите нам ваш адрес текстом или геолокацию</b>'
 OTHER_MENU_TEXT = '<i>Либо продолжите выбор:</i>'
+OTHER_MENU_TEXT_2 = '<i>Вы можете продолжить выбор:</i>'
 
 
 def get_main_menu(start_product=0, offset_products=10, number_line_buttons=2, restart=False):
@@ -229,7 +230,29 @@ def handle_waiting(update: Update, context: CallbackContext):
         reply_markup=get_main_menu(restart=True),
         parse_mode=PARSEMODE_HTML
     )
-    return 'HANDLE_MENU'
+    return 'HANDLE_LOCATION'
+
+
+def handle_location(update: Update, context: CallbackContext):
+    message = None
+    if update.edited_message:
+        message = update.edited_message
+    else:
+        message = update.message
+    if message and message.location:
+        current_pos = (message.location.latitude, message.location.longitude)
+        print(current_pos)
+    else:
+        previous_msg = update.effective_message.text
+        print(previous_msg)
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=f'{THANK_TEXT}\n{OTHER_MENU_TEXT_2}',
+        reply_markup=get_main_menu(restart=True),
+        parse_mode=PARSEMODE_HTML
+    )
+
+    return 'START'
 
 
 def handle_users_reply(update: Update, context: CallbackContext):
@@ -254,7 +277,8 @@ def handle_users_reply(update: Update, context: CallbackContext):
         'HANDLE_DESCRIPTION': handle_description,
         'CART_INFO': get_cart_info,
         'HANDLER_CART':  handler_cart,
-        'HANDLE_WAITING': handle_waiting
+        'HANDLE_WAITING': handle_waiting,
+        'HANDLE_LOCATION': handle_location,
     }
     state_handler = states_functions[user_state]
     try:
@@ -286,6 +310,7 @@ if __name__ == '__main__':
     dispatcher.redis = redis.Redis(host=database_host, port=database_port, password=database_password)
     updater.logger.warning('Бот Telegram "pizza-payments" запущен')
     dispatcher.add_handler(CallbackQueryHandler(handle_users_reply))
+    dispatcher.add_handler(MessageHandler(Filters.location, handle_location))
     dispatcher.add_handler(MessageHandler(Filters.text, handle_users_reply))
     dispatcher.add_handler(CommandHandler('start', handle_users_reply))
     updater.start_polling()
