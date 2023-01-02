@@ -17,4 +17,4 @@ def fetch_coordinates(apikey, address):
     most_relevant = found_places[0]
     lng, lat = most_relevant['GeoObject']['Point']['pos'].split(" ")
 
-    return {'lng': float(lng), 'lat': float(lat), 'address': address}
+    return lat, lng

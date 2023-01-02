@@ -21,6 +21,7 @@ NONE_CART_TEXT = 'Нет в корзине'
 GEO_REQUEST_TEXT = '<b>Для доставки вашего заказа пришлите нам ваш адрес текстом или геолокацию</b>'
 AFTER_EMAIL_TEXT = '<i>Либо продолжите выбор:</i>'
 AFTER_GEO_TEXT = '<i>Вы можете продолжить выбор, либо уточните адрес:</i>'
+REPIET_SEND_COORD = '<b>Извините, но мы не смогли определить ваши координаты!</b>'
 
 
 def get_main_menu(start_product=0, offset_products=10, number_line_buttons=2, restart=False):
@@ -242,15 +243,18 @@ def handle_location(update: Update, context: CallbackContext):
         message = update.edited_message
     else:
         message = update.message
+    msg = f'{THANK_TEXT}\n{AFTER_GEO_TEXT}'
     if message and message.location:
         current_pos = (message.location.latitude, message.location.longitude)
         print(current_pos)
     else:
         address = update.effective_message.text
-        print(fetch_coordinates(os.environ['YANDEX_GEO_TOKEN'], address))
+        current_pos = fetch_coordinates(os.environ['YANDEX_GEO_TOKEN'], address)
+        if not current_pos:
+            msg = f'{THANK_TEXT}\n{REPIET_SEND_COORD}\n{AFTER_GEO_TEXT}'
     context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text=f'{THANK_TEXT}\n{AFTER_GEO_TEXT}',
+        text=msg,
         reply_markup=get_main_menu(restart=True),
         parse_mode=PARSEMODE_HTML
     )
