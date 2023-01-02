@@ -206,7 +206,8 @@ def handler_cart(update: Update, context: CallbackContext):
     if update.callback_query.data == '/pay':
         context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text='Введите ваш email',
+            text='Введите ваш email, либо продолжите выбор:',
+            reply_markup=get_main_menu(restart=True)
         )
         return 'HANDLE_WAITING'
     id_cart_item = update.callback_query.data
