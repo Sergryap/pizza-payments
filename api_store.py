@@ -392,14 +392,23 @@ def create_customer(name, email, password=None):
     return response.json()
 
 
+def get_all_entries(flow_slug='branch-addresses'):
+    url = f'https://api.moltin.com/v2/flows/{flow_slug}/entries'
+    headers = {'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}'}
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    return response.json()
+
+
 if __name__ == '__main__':
     env = Env()
     env.read_env()
-    check_token()
+    pprint(check_token())
+    pprint(get_all_entries())
     # all_products = get_pcm_products()
     # pprint(create_relationships_to_products(all_products))
     # pprint(get_products())
-    pprint(get_product('0f7dcda1-79bf-407c-80ea-49d22a1534e4'))
+    # pprint(get_product('0f7dcda1-79bf-407c-80ea-49d22a1534e4'))
     # pprint(get_pcm_price_book(os.environ["PRICE_BOOK_ID"]))
     # pprint(
     #   create_flow(
