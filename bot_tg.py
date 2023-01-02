@@ -6,7 +6,7 @@ import requests
 import api_store as api
 from textwrap import dedent
 from environs import Env
-from geo_informer import fetch_coordinates
+from geo_informer import fetch_coordinates, get_min_distance_branch
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Filters, Updater, CallbackContext
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
@@ -244,14 +244,50 @@ def handle_location(update: Update, context: CallbackContext):
         message = update.edited_message
     else:
         message = update.message
-    msg = f'{THANK_TEXT}\n{AFTER_GEO_TEXT}'
     if message and message.location:
         current_pos = (message.location.latitude, message.location.longitude)
     else:
         address = update.effective_message.text
         current_pos = fetch_coordinates(os.environ['YANDEX_GEO_TOKEN'], address)
-        if not current_pos:
-            msg = f'{THANK_TEXT}\n{REPIET_SEND_COORD}\n{AFTER_GEO_TEXT}'
+
+    if current_pos:
+        branch_address, branch_dist = get_min_distance_branch(current_pos)
+        if branch_dist <= 0.5:
+            msg = f'''
+                   Можете забрать пиццу из нашей пиццерии неподалеку?
+                   Она всего в {round(branch_dist*1000, 0)} метров от Вас!
+                   Вот её адрес: {branch_address}.
+                   А можем и бесплатно доставить нам не сложно.
+                   '''
+        elif branch_dist <= 5:
+            msg = f'''
+                   Похоже придется ехать до Вас на самокате.
+                   Доставка будет стоить 100 р.
+                   Доставляем или самовывоз?
+                   '''
+        elif branch_dist <= 20:
+            msg = f'''
+                   Похоже придется ехать до Вас на автомобиле.
+                   Доставка будет стоить 300 р.
+                   Доставляем или самовывоз?
+                   '''
+        elif branch_dist <= 50:
+            msg = f'''
+                   Простите но так далеко мы пиццу не доставляем.
+                   Ближайшая пиццерия от Вас в {round(branch_dist, 0)} км.
+                   Но вы может забрать её самостоятельно.
+                   Оформляем самовывоз?
+                   '''
+        else:
+            msg = f'''
+                   Простите но так далеко мы пиццу не доставляем.
+                   Ближайшая пиццерия от Вас в {round(branch_dist, 0)} км.
+                   Мы уверены, что есть другие пиццерии гораздо ближе.
+                   '''
+        msg = f'{dedent(msg)}\n{AFTER_GEO_TEXT}'
+    else:
+        msg = f'{THANK_TEXT}\n{REPIET_SEND_COORD}\n{AFTER_GEO_TEXT}'
+
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=msg,
