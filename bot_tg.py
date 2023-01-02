@@ -4,6 +4,7 @@ import requests
 import api_store as api
 from textwrap import dedent
 from environs import Env
+from yandex_geocoder import fetch_coordinates
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Filters, Updater, CallbackContext
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
