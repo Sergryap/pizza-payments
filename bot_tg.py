@@ -247,7 +247,6 @@ def handle_location(update: Update, context: CallbackContext):
     msg = f'{THANK_TEXT}\n{AFTER_GEO_TEXT}'
     if message and message.location:
         current_pos = (message.location.latitude, message.location.longitude)
-        print(current_pos)
     else:
         address = update.effective_message.text
         current_pos = fetch_coordinates(os.environ['YANDEX_GEO_TOKEN'], address)
