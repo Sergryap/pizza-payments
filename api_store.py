@@ -300,6 +300,23 @@ def create_entry(flow_slug, fields_data):
     return response.json()
 
 
+def create_entry_relationship(flow_slug, entry_id, field_slug, resource_type, resource_id):
+    url = f'https://api.moltin.com/v2/flows/{flow_slug}/entries/{entry_id}/relationships/{field_slug}'
+    headers = {
+        'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}',
+        'Content-Type': 'application/json'
+    }
+    json_data = {
+        'data': {
+            'type': resource_type,
+            'id': resource_id
+        }
+    }
+    response = requests.post(url=url, headers=headers)
+    response.raise_for_status()
+    return response.json()
+
+
 def get_file(file_id):
     url = f'https://api.moltin.com/v2/files/{file_id}'
     headers = {'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}'}
@@ -404,7 +421,8 @@ if __name__ == '__main__':
     env = Env()
     env.read_env()
     pprint(check_token())
-    pprint(get_all_entries())
+    # create_entry_relationship(flow_slug='customer-address', field_slug='customer', entry_id=)
+    # pprint(get_all_entries())
     # all_products = get_pcm_products()
     # pprint(create_relationships_to_products(all_products))
     # pprint(get_products())
