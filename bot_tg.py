@@ -328,7 +328,25 @@ def handle_location(update: Update, context: CallbackContext):
 
 
 def handle_delivery(update: Update, context: CallbackContext):
-    pass
+    callback_data = update.callback_query.data
+    if callback_data == 'delivery':
+        msg = f'''
+               Спасибо, что выбрали нашу пиццу.
+               Ваш заказ уже готовиться и скоро будет доставлен.
+               '''
+    elif callback_data == 'pickup':
+        msg = f'''
+               Спасибо, что выбрали нашу пиццу.
+               Вы можете забрать свой заказ по адресу:
+               '''
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=dedent(msg),
+        reply_markup=get_main_menu(restart=True),
+        parse_mode=PARSEMODE_HTML
+    )
+
+    return 'HANDLE_LOCATION'
 
 
 def handle_users_reply(update: Update, context: CallbackContext):
@@ -355,6 +373,7 @@ def handle_users_reply(update: Update, context: CallbackContext):
         'HANDLER_CART':  handler_cart,
         'HANDLE_WAITING': handle_waiting,
         'HANDLE_LOCATION': handle_location,
+        'HANDLE_DELIVERY': handle_delivery,
     }
     state_handler = states_functions[user_state]
     try:
