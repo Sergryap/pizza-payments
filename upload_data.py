@@ -58,4 +58,50 @@ if __name__ == '__main__':
     env.read_env()
     api.check_token()
     # upload_products()
-    upload_addresses()
+    # upload_addresses()
+    # Cоздание модели для адреса пользователя
+    customer_address_flow = api.create_flow(name='Customer address', description='Customer address')
+    customer_address_flow_id = customer_address_flow['data']['id']
+    api.created_string_fields(
+            flow_id=customer_address_flow_id,
+            flows_data=[
+                {
+                    'name': 'Address',
+                    'description': 'Customer address',
+                    'order': 1
+                },
+            ]
+        )
+    api.created_float_fields(
+        flow_id=customer_address_flow_id,
+        flows_data=[
+            {
+                'name': 'Latitude',
+                'description': 'Latitude of customer address',
+                'order': 2,
+                'validation_rules': [
+                    {
+                        'type': 'between',
+                        'options': {
+                            'from': -90.0,
+                            'to': 90.0
+                        }
+                    }
+                ]
+            },
+            {
+                'name': 'Longitude',
+                'description': 'Longitude of customer address',
+                'order': 3,
+                'validation_rules': [
+                    {
+                        'type': 'between',
+                        'options': {
+                            'from': -180.0,
+                            'to': 180.0
+                        }
+                    }
+                ]
+            },
+        ]
+    )
