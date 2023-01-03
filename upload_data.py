@@ -105,3 +105,10 @@ if __name__ == '__main__':
             },
         ]
     )
+    api.create_field(
+        name='Customer',
+        description='Customer data relationship',
+        field_type='relationship',
+        flow_id=customer_address_flow_id,
+        order=4
+    )
