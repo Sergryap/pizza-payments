@@ -238,16 +238,20 @@ def handle_waiting(update: Update, context: CallbackContext):
     return 'HANDLE_LOCATION'
 
 
-def get_button_delivery(delivery: bool = True):
-    if delivery:
+def get_button_delivery(delivery: bool = True, pickup: bool = True):
+    if delivery and pickup:
         custom_keyboard = [
             [InlineKeyboardButton('Доставка', callback_data='delivery')],
             [InlineKeyboardButton('Самовывоз', callback_data='pickup')],
             [InlineKeyboardButton('Вернуться в меню', callback_data='/start')]
         ]
-    else:
+    elif not delivery and pickup:
         custom_keyboard = [
             [InlineKeyboardButton('Самовывоз', callback_data='pickup')],
+            [InlineKeyboardButton('Вернуться в меню', callback_data='/start')]
+        ]
+    else:
+        custom_keyboard = [
             [InlineKeyboardButton('Вернуться в меню', callback_data='/start')]
         ]
 
@@ -300,7 +304,7 @@ def handle_location(update: Update, context: CallbackContext):
                    Оформляем самовывоз?
                    '''
         else:
-            reply_markup = get_main_menu(restart=True)
+            reply_markup = get_button_delivery(pickup=False)
             msg = f'''
                    Простите но так далеко мы пиццу не доставляем.
                    Ближайшая пиццерия от Вас в {round(branch_dist, 0)} км.
@@ -318,8 +322,13 @@ def handle_location(update: Update, context: CallbackContext):
         reply_markup=reply_markup,
         parse_mode=PARSEMODE_HTML
     )
-
+    if current_pos and branch_dist <= 50:
+        return 'HANDLE_DELIVERY'
     return 'HANDLE_LOCATION'
+
+
+def handle_delivery(update: Update, context: CallbackContext):
+    pass
 
 
 def handle_users_reply(update: Update, context: CallbackContext):
