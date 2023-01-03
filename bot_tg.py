@@ -26,7 +26,7 @@ REPIET_SEND_COORD = '<b>Извините, но мы не смогли опред
 
 def get_main_menu(start_product=0, offset_products=10, number_line_buttons=2, restart=False):
     if restart:
-        custom_keyboard = [[InlineKeyboardButton('Продолжить выбор', callback_data='/start')]]
+        custom_keyboard = [[InlineKeyboardButton('Вернуться в меню', callback_data='/start')]]
         return InlineKeyboardMarkup(
             inline_keyboard=custom_keyboard,
             resize_keyboard=True
@@ -238,6 +238,25 @@ def handle_waiting(update: Update, context: CallbackContext):
     return 'HANDLE_LOCATION'
 
 
+def get_button_delivery(delivery: bool = True):
+    if delivery:
+        custom_keyboard = [
+            [InlineKeyboardButton('Доставка', callback_data='delivery')],
+            [InlineKeyboardButton('Самовывоз', callback_data='pickup')],
+            [InlineKeyboardButton('Вернуться в меню', callback_data='/start')]
+        ]
+    else:
+        custom_keyboard = [
+            [InlineKeyboardButton('Самовывоз', callback_data='pickup')],
+            [InlineKeyboardButton('Вернуться в меню', callback_data='/start')]
+        ]
+
+    return InlineKeyboardMarkup(
+        inline_keyboard=custom_keyboard,
+        resize_keyboard=True
+    )
+
+
 def handle_location(update: Update, context: CallbackContext):
     message = None
     if update.edited_message:
@@ -252,6 +271,7 @@ def handle_location(update: Update, context: CallbackContext):
 
     if current_pos:
         branch_address, branch_dist = get_min_distance_branch(current_pos)
+        reply_markup = get_button_delivery()
         if branch_dist <= 0.5:
             msg = f'''
                    Можете забрать пиццу из нашей пиццерии неподалеку?
@@ -272,6 +292,7 @@ def handle_location(update: Update, context: CallbackContext):
                    Доставляем или самовывоз?
                    '''
         elif branch_dist <= 50:
+            reply_markup = get_button_delivery(delivery=False)
             msg = f'''
                    Простите но так далеко мы пиццу не доставляем.
                    Ближайшая пиццерия от Вас в {round(branch_dist, 0)} км.
@@ -279,19 +300,22 @@ def handle_location(update: Update, context: CallbackContext):
                    Оформляем самовывоз?
                    '''
         else:
+            reply_markup = get_main_menu(restart=True)
             msg = f'''
                    Простите но так далеко мы пиццу не доставляем.
                    Ближайшая пиццерия от Вас в {round(branch_dist, 0)} км.
                    Мы уверены, что есть другие пиццерии гораздо ближе.
+                   Либо уточните адрес доставки.
                    '''
         msg = f'{dedent(msg)}\n{AFTER_GEO_TEXT}'
     else:
+        reply_markup = get_main_menu(restart=True)
         msg = f'{THANK_TEXT}\n{REPIET_SEND_COORD}\n{AFTER_GEO_TEXT}'
 
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=msg,
-        reply_markup=get_main_menu(restart=True),
+        reply_markup=reply_markup,
         parse_mode=PARSEMODE_HTML
     )
 
