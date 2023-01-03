@@ -110,5 +110,11 @@ if __name__ == '__main__':
         description='Customer data relationship',
         field_type='relationship',
         flow_id=customer_address_flow_id,
-        order=4
+        order=4,
+        validation_rules=[
+            {
+                'type': 'one-to-many',
+                'to': 'customer'
+            }
+        ]
     )
