@@ -461,13 +461,14 @@ def get_entry_by_email(email, flow_slug='customer-address'):
     return list((entry for entry in all_entries['data'] if entry['email'] == email))
 
 
-def get_entry_by_pos(email: str, customer_pos: tuple, flow_slug='customer-address'):
+def get_entry_by_pos(email: str, phone: str, customer_pos: tuple, flow_slug='customer-address'):
     all_entries = get_all_entries(flow_slug=flow_slug)
     return list(
         (
             entry for entry in all_entries['data']
             if (entry['latitude'], entry['longitude']) == customer_pos
             and entry['email'] == email.lower().strip()
+            and entry['phone'] == phone
         )
     )
 
