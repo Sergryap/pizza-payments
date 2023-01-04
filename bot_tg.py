@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from pprint import pprint
 
 import redis
@@ -71,6 +72,8 @@ def get_product_info_menu(product_id, price):
 
 
 def start(update: Update, context: CallbackContext):
+    login_user = update.effective_user.username
+    os.environ[f'{login_user}_STEP_HANDLE'] = '1'
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=MENU_TEXT,
@@ -165,6 +168,7 @@ def handle_description(update: Update, context: CallbackContext):
 
 
 def create_cart_msg(update: Update, delivery_address=None):
+    login_user = update.effective_user.username
     total_value = (
         api.get_cart(update.effective_user.id)
         ['data']['meta']['display_price']['without_tax']['formatted']
@@ -195,6 +199,7 @@ def create_cart_msg(update: Update, delivery_address=None):
                 <b>Общая стоимость: {total_value}</b>
                    
                 <b>Адрес доставки: {delivery_address}</b>
+                <b>Телефон заказчика: {os.environ[f'{login_user}_PHONE']}</b>
                 '''
     return summary_msg, custom_keyboard
 
@@ -252,9 +257,15 @@ def handle_waiting(update: Update, context: CallbackContext):
                 os.environ[f'{login_user}_STEP_HANDLE'] = '1'
     elif os.environ[f'{login_user}_STEP_HANDLE'] == '2':
         user_phone = update.message.text
-        os.environ[f'{login_user}_PHONE'] = user_phone
-        actual_return = 'HANDLE_LOCATION'
-        msg = f'{THANK_TEXT}\n{GEO_REQUEST_TEXT}\n{AFTER_EMAIL_TEXT}'
+        phone_rule = re.compile(r'(^[+0-9]{1,3})*([0-9]{10,11}$)')
+        if phone_rule.search(user_phone):
+            actual_return = 'HANDLE_LOCATION'
+            os.environ[f'{login_user}_STEP_HANDLE'] = '1'
+            os.environ[f'{login_user}_PHONE'] = user_phone
+            msg = f'{THANK_TEXT}\n{GEO_REQUEST_TEXT}\n{AFTER_EMAIL_TEXT}'
+        else:
+            actual_return = 'HANDLE_WAITING'
+            msg = f'Введите корректный номер телефона'
 
     context.bot.send_message(
         chat_id=update.effective_chat.id,
@@ -304,15 +315,16 @@ def handle_location(update: Update, context: CallbackContext):
 
     if current_pos:
         branch_address, branch_dist, telegram_id = get_min_distance_branch(current_pos)
-        email_user = os.environ[f'{login_user}_EMAIL']
-        existing_entry = api.get_entry_by_pos(email_user, current_pos)
+        user_email = os.environ[f'{login_user}_EMAIL']
+        user_phone = [f'{login_user}_PHONE']
+        existing_entry = api.get_entry_by_pos(user_email, current_pos)
         address = address if address else 'Пользователь не указал адрес'
         if not existing_entry:
             customer_address_entry = api.create_entry(
                 flow_slug='customer-address',
                 fields_data={
                     'address': address,
-                    'email': email_user.lower().strip(),
+                    'email': user_email.lower().strip(),
                     'latitude': current_pos[0],
                     'longitude': current_pos[1]
                 }
