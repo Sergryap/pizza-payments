@@ -457,10 +457,20 @@ def get_entry_by_email(email, flow_slug='customer-address'):
     return list((entry for entry in all_entries['data'] if entry['email'] == email))[0]
 
 
+def get_entry_by_pos(customer_pos: tuple, flow_slug='customer-address'):
+    all_entries = get_all_entries(flow_slug=flow_slug)
+    return list(
+        (
+            entry for entry in all_entries['data'] if (entry['latitude'], entry['longitude']) == customer_pos
+        )
+    )[0]
+
+
 if __name__ == '__main__':
     env = Env()
     env.read_env()
     check_token()
+    pprint(get_entry_by_pos(customer_pos=(55.755819, 37.617644)))
     # pprint(get_all_entries(flow_slug='customer-address'))
     # pprint(get_entry_by_email(email='rs1180@mail.ru'))
     # pprint(create_customer_address(
