@@ -1,5 +1,6 @@
 import logging
 import os
+from pprint import pprint
 
 import redis
 import requests
@@ -163,7 +164,7 @@ def handle_description(update: Update, context: CallbackContext):
     return "HANDLE_DESCRIPTION"
 
 
-def create_cart_msg(update: Update):
+def create_cart_msg(update: Update, delivery_address=None):
     total_value = (
         api.get_cart(update.effective_user.id)
         ['data']['meta']['display_price']['without_tax']['formatted']
@@ -173,21 +174,29 @@ def create_cart_msg(update: Update):
     custom_keyboard = []
     for item in cart_items['data']:
         msg += f'''
-            <b>{item['name']}</b>
-            {item['description']}
-            {item['meta']['display_price']['without_tax']['unit']['formatted']}
-            <i>{item['quantity']} шт. за {item['meta']['display_price']['without_tax']['value']['formatted']}</i>
-            '''
+                <b>{item['name']}</b>
+                {item['description']}
+                {item['meta']['display_price']['without_tax']['unit']['formatted']}
+                <i>{item['quantity']} шт. за {item['meta']['display_price']['without_tax']['value']['formatted']}</i>
+                '''
         custom_keyboard.append(
             [InlineKeyboardButton(f'Убрать из корзины: {item["name"]}', callback_data=item['id'])]
         )
     custom_keyboard.append([InlineKeyboardButton('Меню', callback_data='/start')])
     custom_keyboard.append([InlineKeyboardButton('Оплата', callback_data='/pay')])
-    msg = f'''
-            {msg}        
-            <b>Общая стоимость: {total_value}</b>
-            '''
-    return msg, custom_keyboard
+    if not delivery_address:
+        summary_msg = f'''
+                {msg}        
+                <b>Общая стоимость: {total_value}</b>
+                '''
+    else:
+        summary_msg = f'''
+                {msg}        
+                <b>Общая стоимость: {total_value}</b>
+                   
+                <b>Адрес доставки: {delivery_address}</b>
+                '''
+    return summary_msg, custom_keyboard
 
 
 def get_cart_info(update: Update, context: CallbackContext):
@@ -286,7 +295,7 @@ def handle_location(update: Update, context: CallbackContext):
         current_pos = fetch_coordinates(os.environ['YANDEX_GEO_TOKEN'], address)
 
     if current_pos:
-        branch_address, branch_dist = get_min_distance_branch(current_pos)
+        branch_address, branch_dist, telegram_id = get_min_distance_branch(current_pos)
         customer_address_entry = api.create_entry(
             flow_slug='customer-address',
             fields_data={
@@ -295,8 +304,10 @@ def handle_location(update: Update, context: CallbackContext):
                 'longitude': current_pos[1]
             }
         )
-        print(customer_address_entry['data']['id'])
-        print(os.environ[f'{login_user}_CURRENT_CUSTOMER_ID'])
+        os.environ[f'{login_user}_DELIVERY_ADDRESS'] = address if address else 'Пользователь не указал адрес'
+        os.environ[f'{login_user}_DELIVERY_LATITUDE'] = str(current_pos[0])
+        os.environ[f'{login_user}_DELIVERY_LONGITUDE'] = str(current_pos[1])
+        os.environ[f'{login_user}_DELIVERY_TELEGRAM_ID'] = telegram_id
         api.create_entry_relationship(
             flow_slug='customer-address',
             entry_id=customer_address_entry['data']['id'],
@@ -358,11 +369,28 @@ def handle_location(update: Update, context: CallbackContext):
 
 def handle_delivery(update: Update, context: CallbackContext):
     callback_data = update.callback_query.data
+    login_user = update.effective_user.username
     if callback_data == 'delivery':
         msg = f'''
                Спасибо, что выбрали нашу пиццу.
                Ваш заказ уже готовиться и скоро будет доставлен.
                '''
+        delivery_address = os.environ[f'{login_user}_DELIVERY_ADDRESS']
+        delivery_latitude = os.environ[f'{login_user}_DELIVERY_LATITUDE']
+        delivery_longitude = os.environ[f'{login_user}_DELIVERY_LONGITUDE']
+        delivery_telegram_id = os.environ[f'{login_user}_DELIVERY_TELEGRAM_ID']
+        cart_msg, __ = create_cart_msg(update, delivery_address=delivery_address)
+
+        context.bot.send_message(
+            chat_id=delivery_telegram_id,
+            text=dedent(cart_msg),
+            parse_mode=PARSEMODE_HTML
+        )
+        context.bot.send_location(
+            chat_id=delivery_telegram_id,
+            latitude=float(delivery_latitude),
+            longitude=float(delivery_longitude)
+        )
     elif callback_data == 'pickup':
         msg = f'''
                Спасибо, что выбрали нашу пиццу.
