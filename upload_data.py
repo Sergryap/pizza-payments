@@ -57,8 +57,65 @@ if __name__ == '__main__':
     env = Env()
     env.read_env()
     api.check_token()
-    # upload_products()
-    # upload_addresses()
+
+    #Создание модели для адреса филиала
+    branch_address_flow = api.create_flow(name='Branch addresses', description='Addresses of branches of pizzerias')
+    branch_address_flow_id = branch_address_flow['data']['id']
+    api.created_string_fields(
+        flow_id=branch_address_flow_id,
+        flows_data=[
+            {
+                'name': 'Address',
+                'description': 'Branch address',
+                'order': 1
+            },
+            {
+                'name': 'Alias',
+                'description': 'Alias of Branch address',
+                'order': 2
+            },
+            {
+                'name': 'Telegram ID',
+                'description': 'The deliveryman pizza telegram id',
+                'order': 5,
+                'default': '1642719191'
+            },
+        ]
+    )
+    api.created_float_fields(
+            flow_id=branch_address_flow_id,
+            flows_data=[
+                {
+                    'name': 'Longitude',
+                    'description': 'Longitude of branch address',
+                    'order': 3,
+                    'validation_rules': [
+                        {
+                            'type': 'between',
+                            'options': {
+                                'from': -180.0,
+                                'to': 180.0
+                            }
+                        }
+                    ]
+                },
+                {
+                    'name': 'Latitude',
+                    'description': 'Latitude of branch address',
+                    'order': 4,
+                    'validation_rules': [
+                        {
+                            'type': 'between',
+                            'options': {
+                                'from': -90.0,
+                                'to': 90.0
+                            }
+                        }
+                    ]
+                }
+            ]
+        )
+
     # Cоздание модели для адреса пользователя
     customer_address_flow = api.create_flow(name='Customer address', description='Customer address')
     customer_address_flow_id = customer_address_flow['data']['id']
@@ -123,3 +180,5 @@ if __name__ == '__main__':
             }
         ]
     )
+    upload_products()
+    upload_addresses()
