@@ -58,7 +58,7 @@ if __name__ == '__main__':
     env.read_env()
     api.check_token()
 
-    #Создание модели для адреса филиала
+    # Создание модели для адреса филиала
     branch_address_flow = api.create_flow(name='Branch addresses', description='Addresses of branches of pizzerias')
     branch_address_flow_id = branch_address_flow['data']['id']
     api.created_string_fields(
@@ -132,6 +132,11 @@ if __name__ == '__main__':
                     'description': 'Email customer address',
                     'order': 2
                 },
+                {
+                    'name': 'Phone',
+                    'description': 'Customer phone number',
+                    'order': 3
+                },
             ]
         )
     api.created_float_fields(
@@ -140,7 +145,7 @@ if __name__ == '__main__':
             {
                 'name': 'Latitude',
                 'description': 'Latitude of customer address',
-                'order': 3,
+                'order': 4,
                 'validation_rules': [
                     {
                         'type': 'between',
@@ -154,7 +159,7 @@ if __name__ == '__main__':
             {
                 'name': 'Longitude',
                 'description': 'Longitude of customer address',
-                'order': 4,
+                'order': 5,
                 'validation_rules': [
                     {
                         'type': 'between',
@@ -172,7 +177,7 @@ if __name__ == '__main__':
         description='Customer data relationship',
         field_type='relationship',
         flow_id=customer_address_flow_id,
-        order=5,
+        order=6,
         validation_rules=[
             {
                 'type': 'one-to-many',
