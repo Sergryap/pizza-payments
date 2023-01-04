@@ -22,6 +22,7 @@ def check_token(error=False):
         token_data = response.json()
         os.environ['TOKEN_EXPIRES'] = str(token_data['expires'] - 60)
         os.environ['ACCESS_TOKEN'] = token_data['access_token']
+        pprint(token_data)
 
 
 def create_product(name: str, sku: str, description: str, price: int):
@@ -307,12 +308,14 @@ def create_entry_relationship(flow_slug, entry_id, field_slug, resource_type, re
         'Content-Type': 'application/json'
     }
     json_data = {
-        'data': {
-            'type': resource_type,
-            'id': resource_id
-        }
+        'data': [
+            {
+                'type': resource_type,
+                'id': resource_id
+            }
+        ]
     }
-    response = requests.post(url=url, headers=headers)
+    response = requests.post(url=url, headers=headers, json=json_data)
     response.raise_for_status()
     return response.json()
 
@@ -409,6 +412,15 @@ def create_customer(name, email, password=None):
     return response.json()
 
 
+def get_all_customers(email=None):
+    url = 'https://api.moltin.com/v2/customers'
+    headers = {'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}'}
+    params = {'filter': f'eq(email,{email})'} if email else ''
+    response = requests.get(url, headers=headers, params=params)
+    response.raise_for_status()
+    return response.json()
+
+
 def get_all_entries(flow_slug='branch-addresses'):
     url = f'https://api.moltin.com/v2/flows/{flow_slug}/entries'
     headers = {'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}'}
@@ -420,8 +432,15 @@ def get_all_entries(flow_slug='branch-addresses'):
 if __name__ == '__main__':
     env = Env()
     env.read_env()
-    pprint(check_token())
-    # create_entry_relationship(flow_slug='customer-address', field_slug='customer', entry_id=)
+    check_token()
+    # pprint(get_all_customers('rs1180@mail.ru'))
+    # pprint(create_entry_relationship(
+    #     flow_slug='customer-address',
+    #     field_slug='customer',
+    #     entry_id='f57b8e87-e3e4-46f0-a66c-05d13b9b5e7a',
+    #     resource_id='edfb0885-9460-49de-9e3a-134b9e421033',
+    #     resource_type='customer'
+    # ))
     # pprint(get_all_entries())
     # all_products = get_pcm_products()
     # pprint(create_relationships_to_products(all_products))
