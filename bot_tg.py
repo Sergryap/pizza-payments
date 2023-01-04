@@ -235,6 +235,7 @@ def handler_cart(update: Update, context: CallbackContext):
 def handle_waiting(update: Update, context: CallbackContext):
     email_user = update.message.text
     login_user = update.effective_user.username
+    os.environ[f'{login_user}_EMAIL'] = email_user
     actual_return = 'HANDLE_LOCATION'
     msg = f'{THANK_TEXT}\n{GEO_REQUEST_TEXT}\n{AFTER_EMAIL_TEXT}'
     try:
@@ -296,10 +297,12 @@ def handle_location(update: Update, context: CallbackContext):
 
     if current_pos:
         branch_address, branch_dist, telegram_id = get_min_distance_branch(current_pos)
+        email_user = os.environ[f'{login_user}_EMAIL']
         customer_address_entry = api.create_entry(
             flow_slug='customer-address',
             fields_data={
                 'address': address if address else 'Пользователь не указал адрес',
+                'email': email_user,
                 'latitude': current_pos[0],
                 'longitude': current_pos[1]
             }
