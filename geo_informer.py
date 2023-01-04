@@ -29,9 +29,9 @@ def get_min_distance_branch(client_pos):
         branch_pos = (branch['latitude'], branch['longitude'])
         dist = distance.distance(client_pos, branch_pos).km
         branch_distances.append(
-            {'address': branch['address'], 'dist': dist}
+            {'address': branch['address'], 'dist': dist, 'telegram_id': branch['telegram_id']}
         )
     branch_distances.sort(key=lambda x: x['dist'])
     selected_branch = branch_distances[0]
 
-    return selected_branch['address'], selected_branch['dist']
+    return selected_branch['address'], selected_branch['dist'], selected_branch['telegram_id']
