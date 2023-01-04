@@ -316,8 +316,8 @@ def handle_location(update: Update, context: CallbackContext):
     if current_pos:
         branch_address, branch_dist, telegram_id = get_min_distance_branch(current_pos)
         user_email = os.environ[f'{login_user}_EMAIL']
-        user_phone = [f'{login_user}_PHONE']
-        existing_entry = api.get_entry_by_pos(user_email, current_pos)
+        user_phone = os.environ[f'{login_user}_PHONE']
+        existing_entry = api.get_entry_by_pos(user_email, user_phone, current_pos)
         address = address if address else 'Пользователь не указал адрес'
         if not existing_entry:
             customer_address_entry = api.create_entry(
@@ -325,6 +325,7 @@ def handle_location(update: Update, context: CallbackContext):
                 fields_data={
                     'address': address,
                     'email': user_email.lower().strip(),
+                    'phone': user_phone,
                     'latitude': current_pos[0],
                     'longitude': current_pos[1]
                 }
