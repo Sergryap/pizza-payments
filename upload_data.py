@@ -70,6 +70,11 @@ if __name__ == '__main__':
                     'description': 'Customer address',
                     'order': 1
                 },
+                {
+                    'name': 'Email',
+                    'description': 'Email customer address',
+                    'order': 2
+                },
             ]
         )
     api.created_float_fields(
@@ -78,7 +83,7 @@ if __name__ == '__main__':
             {
                 'name': 'Latitude',
                 'description': 'Latitude of customer address',
-                'order': 2,
+                'order': 3,
                 'validation_rules': [
                     {
                         'type': 'between',
@@ -92,7 +97,7 @@ if __name__ == '__main__':
             {
                 'name': 'Longitude',
                 'description': 'Longitude of customer address',
-                'order': 3,
+                'order': 4,
                 'validation_rules': [
                     {
                         'type': 'between',
@@ -110,7 +115,7 @@ if __name__ == '__main__':
         description='Customer data relationship',
         field_type='relationship',
         flow_id=customer_address_flow_id,
-        order=4,
+        order=5,
         validation_rules=[
             {
                 'type': 'one-to-many',
