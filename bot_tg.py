@@ -233,21 +233,28 @@ def handler_cart(update: Update, context: CallbackContext):
 
 
 def handle_waiting(update: Update, context: CallbackContext):
-    email_user = update.message.text
     login_user = update.effective_user.username
-    os.environ[f'{login_user}_EMAIL'] = email_user
-    actual_return = 'HANDLE_LOCATION'
-    msg = f'{THANK_TEXT}\n{GEO_REQUEST_TEXT}\n{AFTER_EMAIL_TEXT}'
-    try:
-        customer = api.create_customer(login_user, email_user)
-        os.environ[f'{login_user}_CURRENT_CUSTOMER_ID'] = customer['data']['id']
-    except requests.exceptions.HTTPError:
-        found_user = api.get_all_customers(email_user)
-        if found_user['data']:
-            os.environ[f'{login_user}_CURRENT_CUSTOMER_ID'] = found_user['data'][0].get('id')
-        else:
-            msg = f'Введите корректный email'
-            actual_return = 'HANDLE_WAITING'
+    if os.environ.get(f'{login_user}_STEP_HANDLE', '1') == '1':
+        user_email = update.message.text
+        os.environ[f'{login_user}_EMAIL'] = user_email
+        actual_return = 'HANDLE_WAITING'
+        msg = 'Введите Ваш телефон'
+        try:
+            os.environ[f'{login_user}_STEP_HANDLE'] = '2'
+            customer = api.create_customer(login_user, user_email)
+            os.environ[f'{login_user}_CURRENT_CUSTOMER_ID'] = customer['data']['id']
+        except requests.exceptions.HTTPError:
+            found_user = api.get_all_customers(user_email)
+            if found_user['data']:
+                os.environ[f'{login_user}_CURRENT_CUSTOMER_ID'] = found_user['data'][0].get('id')
+            else:
+                msg = f'Введите корректный email'
+                os.environ[f'{login_user}_STEP_HANDLE'] = '1'
+    elif os.environ[f'{login_user}_STEP_HANDLE'] == '2':
+        user_phone = update.message.text
+        os.environ[f'{login_user}_PHONE'] = user_phone
+        actual_return = 'HANDLE_LOCATION'
+        msg = f'{THANK_TEXT}\n{GEO_REQUEST_TEXT}\n{AFTER_EMAIL_TEXT}'
 
     context.bot.send_message(
         chat_id=update.effective_chat.id,
@@ -298,26 +305,25 @@ def handle_location(update: Update, context: CallbackContext):
     if current_pos:
         branch_address, branch_dist, telegram_id = get_min_distance_branch(current_pos)
         email_user = os.environ[f'{login_user}_EMAIL']
-        customer_address_entry = api.create_entry(
-            flow_slug='customer-address',
-            fields_data={
-                'address': address if address else 'Пользователь не указал адрес',
-                'email': email_user,
-                'latitude': current_pos[0],
-                'longitude': current_pos[1]
-            }
-        )
-        os.environ[f'{login_user}_DELIVERY_ADDRESS'] = address if address else 'Пользователь не указал адрес'
-        os.environ[f'{login_user}_DELIVERY_LATITUDE'] = str(current_pos[0])
-        os.environ[f'{login_user}_DELIVERY_LONGITUDE'] = str(current_pos[1])
-        os.environ[f'{login_user}_DELIVERY_TELEGRAM_ID'] = telegram_id
-        api.create_entry_relationship(
-            flow_slug='customer-address',
-            entry_id=customer_address_entry['data']['id'],
-            field_slug='customer',
-            resource_type='customer',
-            resource_id=os.environ[f'{login_user}_CURRENT_CUSTOMER_ID']
-        )
+        existing_entry = api.get_entry_by_pos(email_user, current_pos)
+        address = address if address else 'Пользователь не указал адрес'
+        if not existing_entry:
+            customer_address_entry = api.create_entry(
+                flow_slug='customer-address',
+                fields_data={
+                    'address': address,
+                    'email': email_user.lower().strip(),
+                    'latitude': current_pos[0],
+                    'longitude': current_pos[1]
+                }
+            )
+            api.create_entry_relationship(
+                flow_slug='customer-address',
+                entry_id=customer_address_entry['data']['id'],
+                field_slug='customer',
+                resource_type='customer',
+                resource_id=os.environ[f'{login_user}_CURRENT_CUSTOMER_ID']
+            )
         reply_markup = get_button_delivery()
         if branch_dist <= 0.5:
             msg = f'''
@@ -366,6 +372,10 @@ def handle_location(update: Update, context: CallbackContext):
         parse_mode=PARSEMODE_HTML
     )
     if current_pos and branch_dist <= 50:
+        os.environ[f'{login_user}_DELIVERY_ADDRESS'] = address
+        os.environ[f'{login_user}_DELIVERY_LATITUDE'] = str(current_pos[0])
+        os.environ[f'{login_user}_DELIVERY_LONGITUDE'] = str(current_pos[1])
+        os.environ[f'{login_user}_DELIVERY_TELEGRAM_ID'] = telegram_id
         return 'HANDLE_DELIVERY'
     return 'HANDLE_LOCATION'
 
