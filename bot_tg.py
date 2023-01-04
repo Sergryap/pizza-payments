@@ -225,9 +225,12 @@ def handler_cart(update: Update, context: CallbackContext):
 
 def handle_waiting(update: Update, context: CallbackContext):
     email_user = update.message.text
+    login_user = update.effective_user.username
     try:
-        api.create_customer(update.effective_user.username, email_user)
+        customer = api.create_customer(login_user, email_user)
+        os.environ[f'{login_user}_CURRENT_CUSTOMER_ID'] = customer['data']['id']
     except requests.exceptions.HTTPError:
+        os.environ[f'{login_user}_CURRENT_CUSTOMER_ID'] = api.get_all_customers(email_user)['data'][0].get('id')
         print('Клиент уже существует')
     context.bot.send_message(
         chat_id=update.effective_chat.id,
@@ -262,7 +265,9 @@ def get_button_delivery(delivery: bool = True, pickup: bool = True):
 
 
 def handle_location(update: Update, context: CallbackContext):
+    login_user = update.effective_user.username
     message = None
+    address = None
     if update.edited_message:
         message = update.edited_message
     else:
@@ -275,6 +280,23 @@ def handle_location(update: Update, context: CallbackContext):
 
     if current_pos:
         branch_address, branch_dist = get_min_distance_branch(current_pos)
+        customer_address_entry = api.create_entry(
+            flow_slug='customer-address',
+            fields_data={
+                'address': address if address else 'Пользователь не указал адрес',
+                'latitude': current_pos[0],
+                'longitude': current_pos[1]
+            }
+        )
+        print(customer_address_entry['data']['id'])
+        print(os.environ[f'{login_user}_CURRENT_CUSTOMER_ID'])
+        api.create_entry_relationship(
+            flow_slug='customer-address',
+            entry_id=customer_address_entry['data']['id'],
+            field_slug='customer',
+            resource_type='customer',
+            resource_id=os.environ[f'{login_user}_CURRENT_CUSTOMER_ID']
+        )
         reply_markup = get_button_delivery()
         if branch_dist <= 0.5:
             msg = f'''
