@@ -226,19 +226,26 @@ def handler_cart(update: Update, context: CallbackContext):
 def handle_waiting(update: Update, context: CallbackContext):
     email_user = update.message.text
     login_user = update.effective_user.username
+    actual_return = 'HANDLE_LOCATION'
+    msg = f'{THANK_TEXT}\n{GEO_REQUEST_TEXT}\n{AFTER_EMAIL_TEXT}'
     try:
         customer = api.create_customer(login_user, email_user)
         os.environ[f'{login_user}_CURRENT_CUSTOMER_ID'] = customer['data']['id']
     except requests.exceptions.HTTPError:
-        os.environ[f'{login_user}_CURRENT_CUSTOMER_ID'] = api.get_all_customers(email_user)['data'][0].get('id')
-        print('Клиент уже существует')
+        found_user = api.get_all_customers(email_user)
+        if found_user['data']:
+            os.environ[f'{login_user}_CURRENT_CUSTOMER_ID'] = found_user['data'][0].get('id')
+        else:
+            msg = f'Введите корректный email'
+            actual_return = 'HANDLE_WAITING'
+
     context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text=f'{THANK_TEXT}\n{GEO_REQUEST_TEXT}\n{AFTER_EMAIL_TEXT}',
+        text=msg,
         reply_markup=get_main_menu(restart=True),
         parse_mode=PARSEMODE_HTML
     )
-    return 'HANDLE_LOCATION'
+    return actual_return
 
 
 def get_button_delivery(delivery: bool = True, pickup: bool = True):
