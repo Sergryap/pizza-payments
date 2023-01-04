@@ -226,6 +226,7 @@ def create_field(
         order,
         validation_rules=None,
         required=True,
+        default=None,
         enabled=True
 ):
     url = 'https://api.moltin.com/v2/fields'
@@ -255,6 +256,8 @@ def create_field(
     }
     if validation_rules:
         json_data['data'].update({'validation_rules': validation_rules})
+    if default:
+        json_data['data'].update({'default': default})
     response = requests.post(url=url, headers=headers, json=json_data)
     response.raise_for_status()
     return response.json()
@@ -267,7 +270,8 @@ def created_string_fields(flow_id, flows_data):
             description=flow_data['description'],
             field_type='string',
             flow_id=flow_id,
-            order=flow_data['order']
+            order=flow_data['order'],
+            default=flow_data.get('default', None)
         )
 
 
@@ -472,136 +476,3 @@ if __name__ == '__main__':
     env = Env()
     env.read_env()
     check_token()
-    pprint(get_entry_by_pos(email='rs1180@mail.ru', customer_pos=(55.755819, 37.617644)))
-    # pprint(get_all_entries(flow_slug='customer-address'))
-    # pprint(get_entry_by_email(email='rs1180@mail.ru'))
-    # pprint(create_customer_address(
-    #     'cd2edb2c-f4ac-44a4-89dd-5822882db67a',
-    #     'Sergey',
-    #     'Пермь, ул. Целинная, 31/3'
-    # ))
-    # pprint(get_all_customers())
-    # pprint(get_all_entries(flow_slug='customer-address'))
-    # pprint(get_all_customers())
-    # pprint(create_entry_relationship(
-    #     flow_slug='customer-address',
-    #     field_slug='customer',
-    #     entry_id='f57b8e87-e3e4-46f0-a66c-05d13b9b5e7a',
-    #     resource_id='edfb0885-9460-49de-9e3a-134b9e421033',
-    #     resource_type='customer'
-    # ))
-    # pprint(get_all_entries())
-    # all_products = get_pcm_products()
-    # pprint(create_relationships_to_products(all_products))
-    # pprint(get_products())
-    # pprint(get_product('0f7dcda1-79bf-407c-80ea-49d22a1534e4'))
-    # pprint(get_pcm_price_book(os.environ["PRICE_BOOK_ID"]))
-    # pprint(
-    #   create_flow(
-    #       name='Branch addresses',
-    #       description='Addresses of branches of pizzerias'
-    #   )
-    # )
-    # delete_flow('63618de5-0fb8-46b9-9318-bb2019953135')
-    # pprint(
-    #     create_field(
-    #         name='Address',
-    #         description='Branch address',
-    #         field_type='string',
-    #         flow_id='40a7fb8f-fc3b-42be-bd26-c2f3648b96a2',
-    #         order=1
-    #     )
-    # )
-    # pprint(
-    #     create_field(
-    #         name='Alias',
-    #         description='Alias of Branch address',
-    #         field_type='string',
-    #         flow_id='40a7fb8f-fc3b-42be-bd26-c2f3648b96a2',
-    #         order=2
-    #     )
-    # )
-    # created_string_fields(
-    #     flow_id='40a7fb8f-fc3b-42be-bd26-c2f3648b96a2',
-    #     flows_data=[
-    #         {
-    #             'name': 'Address',
-    #             'description': 'Branch address',
-    #             'order': 1
-    #         },
-    #         {
-    #             'name': 'Alias',
-    #             'description': 'Alias of branch address',
-    #             'order': 2
-    #         },
-    #     ]
-    # )
-    # created_float_fields(
-    #     flow_id='40a7fb8f-fc3b-42be-bd26-c2f3648b96a2',
-    #     flows_data=[
-    #         {
-    #             'name': 'Longitude',
-    #             'description': 'Longitude of branch address',
-    #             'order': 3,
-    #             'validation_rules': [
-    #                 {
-    #                     'type': 'between',
-    #                     'options': {
-    #                         'from': -180.0,
-    #                         'to': 180.0
-    #                     }
-    #                 }
-    #             ]
-    #         },
-    #         {
-    #             'name': 'Latitude',
-    #             'description': 'Latitude of branch address',
-    #             'order': 4,
-    #             'validation_rules': [
-    #                 {
-    #                     'type': 'between',
-    #                     'options': {
-    #                         'from': -90.0,
-    #                         'to': 90.0
-    #                     }
-    #                 }
-    #             ]
-    #         }
-    #     ]
-    # )
-    # pprint(
-    #     create_field(
-    #         name='Longitude',
-    #         description='Longitude of Branch address',
-    #         field_type='float',
-    #         flow_id='40a7fb8f-fc3b-42be-bd26-c2f3648b96a2',
-    #         order=3,
-    #         validation_rules=[
-    #             {
-    #                 'type': 'between',
-    #                 'options': {
-    #                     'from': -180.0,
-    #                     'to': 180.0
-    #                 }
-    #             }
-    #         ]
-    #     )
-    # )
-    # pprint(
-    #     create_field(
-    #         name='Latitude',
-    #         description='Latitude of Branch address',
-    #         field_type='float',
-    #         flow_id='40a7fb8f-fc3b-42be-bd26-c2f3648b96a2',
-    #         order=4,
-    #         validation_rules=[
-    #             {
-    #                 'type': 'between',
-    #                 'options': {
-    #                     'from': -90.0,
-    #                     'to': 90.0
-    #                 }
-    #             }
-    #         ]
-    #     )
-    # )
