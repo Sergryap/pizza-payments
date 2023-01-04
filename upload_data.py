@@ -114,7 +114,7 @@ if __name__ == '__main__':
         validation_rules=[
             {
                 'type': 'one-to-many',
-                'to': 'customer'
+                'to': 'Customers'
             }
         ]
     )
