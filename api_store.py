@@ -412,6 +412,29 @@ def create_customer(name, email, password=None):
     return response.json()
 
 
+def create_customer_address(customer_id, first_name, address):
+    url = f'https://api.moltin.com/v2/customers/{customer_id}/addresses'
+    headers = {
+        'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}',
+        'Content-Type': 'application/json'
+    }
+    json_data = {
+        'data': {
+            'type': 'address',
+            'first_name': first_name,
+            'last_name': '-',
+            'line_1': address,
+            'county': '-',
+            'country': 'RU',
+            'postcode': '-',
+            'city': '-'
+        }
+    }
+    response = requests.post(url, headers=headers, json=json_data)
+    response.raise_for_status()
+    return response.json()
+
+
 def get_all_customers(email=None):
     url = 'https://api.moltin.com/v2/customers'
     headers = {'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}'}
@@ -433,7 +456,14 @@ if __name__ == '__main__':
     env = Env()
     env.read_env()
     check_token()
-    # pprint(get_all_customers('rs1180@mail.ru'))
+    # pprint(create_customer_address(
+    #     'cd2edb2c-f4ac-44a4-89dd-5822882db67a',
+    #     'Sergey',
+    #     'Пермь, ул. Целинная, 31/3'
+    # ))
+    # pprint(get_all_customers())
+    # pprint(get_all_entries(flow_slug='customer-address'))
+    # pprint(get_all_customers())
     # pprint(create_entry_relationship(
     #     flow_slug='customer-address',
     #     field_slug='customer',
