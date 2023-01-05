@@ -426,6 +426,7 @@ def handle_delivery(update: Update, context: CallbackContext):
         msg = f'''
                Спасибо, что выбрали нашу пиццу.
                Вы можете забрать свой заказ по адресу:
+               {os.environ[f'{login_user}_BRANCH_ADDRESS']}
                '''
     context.bot.send_message(
         chat_id=update.effective_chat.id,
