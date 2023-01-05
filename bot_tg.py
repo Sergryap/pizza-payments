@@ -250,21 +250,21 @@ def handle_location(update: Update, context: CallbackContext):
                    Вот её адрес: {branch_address}.
                    А можем и бесплатно доставить нам не сложно.
                    '''
-            os.environ[f'{login_user}_DELIVERY_COST'] = '0'
+            delivery_cost = '0'
         elif branch_dist <= 5:
             msg = f'''
                    Похоже придется ехать до Вас на самокате.
                    Доставка будет стоить {DELIVERY_COST_1} р.
                    Доставляем или самовывоз?
                    '''
-            os.environ[f'{login_user}_DELIVERY_COST'] = str(DELIVERY_COST_1)
+            delivery_cost = str(DELIVERY_COST_1)
         elif branch_dist <= 20:
             msg = f'''
                    Похоже придется ехать до Вас на автомобиле.
                    Доставка будет стоить {DELIVERY_COST_2} р.
                    Доставляем или самовывоз?
                    '''
-            os.environ[f'{login_user}_DELIVERY_COST'] = str(DELIVERY_COST_2)
+            delivery_cost = str(DELIVERY_COST_2)
         elif branch_dist <= 50:
             reply_markup = btn.get_delivery_buttons(delivery=False)
             msg = f'''
@@ -273,6 +273,7 @@ def handle_location(update: Update, context: CallbackContext):
                    Но вы может забрать её самостоятельно.
                    Оформляем самовывоз?
                    '''
+            delivery_cost = '0'
         else:
             reply_markup = btn.get_delivery_buttons(pickup=False)
             msg = f'''
@@ -298,6 +299,7 @@ def handle_location(update: Update, context: CallbackContext):
         os.environ[f'{login_user}_DELIVERY_LONGITUDE'] = str(current_pos[1])
         os.environ[f'{login_user}_DELIVERY_TELEGRAM_ID'] = telegram_id
         os.environ[f'{login_user}_BRANCH_ADDRESS'] = branch_address
+        os.environ[f'{login_user}_DELIVERY_COST'] = delivery_cost
 
         return 'HANDLE_DELIVERY'
     return 'HANDLE_LOCATION'
