@@ -10,7 +10,7 @@ from textwrap import dedent
 from environs import Env
 from geo_informer import fetch_coordinates, get_min_distance_branch
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Filters, Updater, CallbackContext
+from telegram.ext import Filters, Updater, CallbackContext, ContextTypes
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 from telegram.constants import PARSEMODE_HTML
 
@@ -24,6 +24,10 @@ GEO_REQUEST_TEXT = '<b>Для доставки вашего заказа при�
 AFTER_EMAIL_TEXT = '<i>Либо продолжите выбор:</i>'
 AFTER_GEO_TEXT = '<i>Вы можете продолжить выбор, либо уточните адрес:</i>'
 REPIET_SEND_COORD = '<b>Извините, но мы не смогли определить ваши координаты!</b>'
+MESSAGE_AFTER_ORDER = f'''
+                       Приятного аппетита!
+                       Если Вы все еще не получили свою пиццу, то она будет для вас бесплатно! 
+                       '''
 
 
 def get_main_menu(start_product=0, offset_products=10, number_line_buttons=2, restart=False):
@@ -428,12 +432,18 @@ def handle_delivery(update: Update, context: CallbackContext):
         reply_markup=get_main_menu(restart=True),
         parse_mode=PARSEMODE_HTML
     )
-
+    context.job_queue.run_once(callback_alarm, 10, context=update.effective_chat.id)
     return 'HANDLE_LOCATION'
 
 
-def handle_users_reply(update: Update, context: CallbackContext):
+def callback_alarm(context: CallbackContext):
+    context.bot.send_message(
+        chat_id=context.job.context,
+        text=dedent(MESSAGE_AFTER_ORDER)
+    )
 
+
+def handle_users_reply(update: Update, context: CallbackContext):
     db = context.dispatcher.redis
     if update.message:
         user_reply = update.message.text
@@ -447,7 +457,6 @@ def handle_users_reply(update: Update, context: CallbackContext):
         user_state = 'START'
     else:
         user_state = db.get(chat_id).decode("utf-8")
-
     states_functions = {
         'START': start,
         'HANDLE_MENU': send_product_info,
@@ -479,7 +488,7 @@ if __name__ == '__main__':
     database_password = env('DATABASE_PASSWORD')
     database_host = env('DATABASE_HOST')
     database_port = env('DATABASE_PORT')
-    updater = Updater(token)
+    updater = Updater(token, use_context=True)
     updater.logger.addHandler(BotLogsHandler(
         token=env('TELEGRAM_TOKEN_LOG'),
         chat_id=env('CHAT_ID_LOG')
@@ -487,8 +496,9 @@ if __name__ == '__main__':
     dispatcher = updater.dispatcher
     dispatcher.redis = redis.Redis(host=database_host, port=database_port, password=database_password)
     updater.logger.warning('Бот Telegram "pizza-payments" запущен')
-    dispatcher.add_handler(CallbackQueryHandler(handle_users_reply))
+    dispatcher.add_handler(CallbackQueryHandler(handle_users_reply, pass_job_queue=True))
     dispatcher.add_handler(MessageHandler(Filters.location, handle_location))
     dispatcher.add_handler(MessageHandler(Filters.text, handle_users_reply))
     dispatcher.add_handler(CommandHandler('start', handle_users_reply))
     updater.start_polling()
+    updater.idle()
