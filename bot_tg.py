@@ -427,14 +427,22 @@ def handle_delivery(update: Update, context: CallbackContext):
             latitude=float(delivery_latitude),
             longitude=float(delivery_longitude)
         )
-        context.job_queue.run_once(callback_after_order, AFTER_ORDER_TIMER, context=update.effective_chat.id)
+        context.job_queue.run_once(
+            callback_after_order,
+            AFTER_ORDER_TIMER,
+            context=update.effective_chat.id
+        )
     elif callback_data == 'pickup':
         msg = f'''
                Спасибо, что выбрали нашу пиццу.
                Вы можете забрать свой заказ по адресу:
                {os.environ[f'{login_user}_BRANCH_ADDRESS']}
                '''
-        context.job_queue.run_once(callback_after_pickup_order, AFTER_PICKUP_ORDER_TIMER, context=update.effective_chat.id)
+        context.job_queue.run_once(
+            callback_after_pickup_order,
+            AFTER_PICKUP_ORDER_TIMER,
+            context=update.effective_chat.id
+        )
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=dedent(msg),
