@@ -365,18 +365,21 @@ def handle_location(update: Update, context: CallbackContext):
                    Вот её адрес: {branch_address}.
                    А можем и бесплатно доставить нам не сложно.
                    '''
+            os.environ[f'{login_user}_DELIVERY_COST'] = '0'
         elif branch_dist <= 5:
             msg = f'''
                    Похоже придется ехать до Вас на самокате.
                    Доставка будет стоить {DELIVERY_COST_1} р.
                    Доставляем или самовывоз?
                    '''
+            os.environ[f'{login_user}_DELIVERY_COST'] = str(DELIVERY_COST_1)
         elif branch_dist <= 20:
             msg = f'''
                    Похоже придется ехать до Вас на автомобиле.
                    Доставка будет стоить {DELIVERY_COST_2} р.
                    Доставляем или самовывоз?
                    '''
+            os.environ[f'{login_user}_DELIVERY_COST'] = str(DELIVERY_COST_2)
         elif branch_dist <= 50:
             reply_markup = get_button_delivery(delivery=False)
             msg = f'''
@@ -418,6 +421,7 @@ def handle_location(update: Update, context: CallbackContext):
 def handle_delivery(update: Update, context: CallbackContext):
     callback_data = update.callback_query.data
     login_user = update.effective_user.username
+    value_pattern = re.compile(r'(\d+),(\d*)')
     if callback_data == 'delivery':
         msg = f'''
                Спасибо, что выбрали нашу пиццу.
@@ -427,8 +431,9 @@ def handle_delivery(update: Update, context: CallbackContext):
         delivery_latitude = os.environ[f'{login_user}_DELIVERY_LATITUDE']
         delivery_longitude = os.environ[f'{login_user}_DELIVERY_LONGITUDE']
         delivery_telegram_id = os.environ[f'{login_user}_DELIVERY_TELEGRAM_ID']
-        cart_msg, __, total_value = create_cart_msg(update, delivery_address=delivery_address)
-
+        cart_msg, __, value = create_cart_msg(update, delivery_address=delivery_address)
+        delivery_cost = int(os.environ[f'{login_user}_DELIVERY_COST'])
+        total_value = int(''.join(value_pattern.search(value).groups())) + delivery_cost
         context.bot.send_message(
             chat_id=delivery_telegram_id,
             text=dedent(cart_msg),
@@ -455,7 +460,8 @@ def handle_delivery(update: Update, context: CallbackContext):
             AFTER_PICKUP_ORDER_TIMER,
             context=update.effective_chat.id
         )
-        __, __, total_value = create_cart_msg(update)
+        __, __, value = create_cart_msg(update)
+        total_value = int(''.join(value_pattern.search(value).groups()))
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=dedent(msg),
@@ -466,10 +472,7 @@ def handle_delivery(update: Update, context: CallbackContext):
 
 
 def handle_payment(update: Update, context: CallbackContext):
-    callback_data = update.callback_query.data
-    login_user = update.effective_user.username
-    value_pattern = re.compile(r'(\d+),(\d*)')
-    total_value = int(''.join(value_pattern.search(callback_data).groups()))
+    total_value = int(update.callback_query.data)
     context.bot.send_invoice(
         chat_id=update.effective_chat.id,
         title='Оплата заказа в pizza-store',
@@ -492,7 +495,7 @@ def precheckout_callback(update: Update, context: CallbackContext):
     else:
         context.bot.answer_pre_checkout_query(pre_checkout_query_id=query.id, ok=True)
     context.bot.send_message(
-        chat_id=update.effective_chat.id,
+        chat_id=update.effective_user.id,
         text='Хотите продолжить?',
         reply_markup=get_main_menu(restart=True)
     )
