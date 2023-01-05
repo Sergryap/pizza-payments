@@ -244,21 +244,22 @@ def handler_cart(update: Update, context: CallbackContext):
 def handle_waiting(update: Update, context: CallbackContext):
     login_user = update.effective_user.username
     if os.environ.get(f'{login_user}_STEP_HANDLE', '1') == '1':
-        user_email = update.message.text
-        os.environ[f'{login_user}_EMAIL'] = user_email
         actual_return = 'HANDLE_WAITING'
-        msg = 'Введите Ваш телефон'
-        try:
-            os.environ[f'{login_user}_STEP_HANDLE'] = '2'
-            customer = api.create_customer(login_user, user_email)
-            os.environ[f'{login_user}_CURRENT_CUSTOMER_ID'] = customer['data']['id']
-        except requests.exceptions.HTTPError:
-            found_user = api.get_all_customers(user_email)
-            if found_user['data']:
+        user_email = update.message.text.lower().strip()
+        email_rule = re.compile(r'(^\S+@\S+\.\S+$)', flags=re.IGNORECASE)
+        if email_rule.search(user_email):
+            os.environ[f'{login_user}_EMAIL'] = user_email
+            msg = 'Введите Ваш телефон'
+            try:
+                os.environ[f'{login_user}_STEP_HANDLE'] = '2'
+                customer = api.create_customer(login_user, user_email)
+                os.environ[f'{login_user}_CURRENT_CUSTOMER_ID'] = customer['data']['id']
+            except requests.exceptions.HTTPError:
+                found_user = api.get_all_customers(user_email)
                 os.environ[f'{login_user}_CURRENT_CUSTOMER_ID'] = found_user['data'][0].get('id')
-            else:
-                msg = f'Введите корректный email'
-                os.environ[f'{login_user}_STEP_HANDLE'] = '1'
+        else:
+            msg = f'Введите корректный email'
+            os.environ[f'{login_user}_STEP_HANDLE'] = '1'
     elif os.environ[f'{login_user}_STEP_HANDLE'] == '2':
         user_phone = update.message.text
         phone_rule = re.compile(r'(^[+0-9]{1,3})*([0-9]{10,11}$)')
