@@ -29,6 +29,8 @@ MESSAGE_AFTER_ORDER = f'''
                        Если Вы все еще не получили свою пиццу, то она будет для вас бесплатно! 
                        '''
 MESSAGE_AFTER_PICKUP_ORDER = 'Ваш заказ уже готов и ждет вас!'
+AFTER_ORDER_TIMER = 3600
+AFTER_PICKUP_ORDER_TIMER = 1200
 
 
 def get_main_menu(start_product=0, offset_products=10, number_line_buttons=2, restart=False):
@@ -425,14 +427,14 @@ def handle_delivery(update: Update, context: CallbackContext):
             latitude=float(delivery_latitude),
             longitude=float(delivery_longitude)
         )
-        context.job_queue.run_once(callback_after_order, 10, context=update.effective_chat.id)
+        context.job_queue.run_once(callback_after_order, AFTER_ORDER_TIMER, context=update.effective_chat.id)
     elif callback_data == 'pickup':
         msg = f'''
                Спасибо, что выбрали нашу пиццу.
                Вы можете забрать свой заказ по адресу:
                {os.environ[f'{login_user}_BRANCH_ADDRESS']}
                '''
-        context.job_queue.run_once(callback_after_pickup_order, 1200, context=update.effective_chat.id)
+        context.job_queue.run_once(callback_after_pickup_order, AFTER_PICKUP_ORDER_TIMER, context=update.effective_chat.id)
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=dedent(msg),
