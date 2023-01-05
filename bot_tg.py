@@ -28,6 +28,7 @@ MESSAGE_AFTER_ORDER = f'''
                        Приятного аппетита!
                        Если Вы все еще не получили свою пиццу, то она будет для вас бесплатно! 
                        '''
+MESSAGE_AFTER_PICKUP_ORDER = 'Ваш заказ уже готов и ждет вас!'
 
 
 def get_main_menu(start_product=0, offset_products=10, number_line_buttons=2, restart=False):
@@ -431,6 +432,7 @@ def handle_delivery(update: Update, context: CallbackContext):
                Вы можете забрать свой заказ по адресу:
                {os.environ[f'{login_user}_BRANCH_ADDRESS']}
                '''
+        context.job_queue.run_once(callback_after_pickup_order, 1200, context=update.effective_chat.id)
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=dedent(msg),
@@ -444,6 +446,13 @@ def callback_after_order(context: CallbackContext):
     context.bot.send_message(
         chat_id=context.job.context,
         text=dedent(MESSAGE_AFTER_ORDER)
+    )
+
+
+def callback_after_pickup_order(context: CallbackContext):
+    context.bot.send_message(
+        chat_id=context.job.context,
+        text=dedent(MESSAGE_AFTER_PICKUP_ORDER)
     )
 
 
