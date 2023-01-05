@@ -394,6 +394,8 @@ def handle_location(update: Update, context: CallbackContext):
         os.environ[f'{login_user}_DELIVERY_LATITUDE'] = str(current_pos[0])
         os.environ[f'{login_user}_DELIVERY_LONGITUDE'] = str(current_pos[1])
         os.environ[f'{login_user}_DELIVERY_TELEGRAM_ID'] = telegram_id
+        os.environ[f'{login_user}_BRANCH_ADDRESS'] = branch_address
+
         return 'HANDLE_DELIVERY'
     return 'HANDLE_LOCATION'
 
