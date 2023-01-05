@@ -34,13 +34,15 @@ DELIVERY_COST_1 = 100
 DELIVERY_COST_2 = 300
 
 
-def get_main_menu(start_product=0, offset_products=10, number_line_buttons=2, restart=False):
-    if restart:
-        custom_keyboard = [[InlineKeyboardButton('Вернуться в меню', callback_data='/start')]]
-        return InlineKeyboardMarkup(
-            inline_keyboard=custom_keyboard,
-            resize_keyboard=True
-        )
+def get_restart_button():
+    custom_keyboard = [[InlineKeyboardButton('Вернуться в меню', callback_data='/start')]]
+    return InlineKeyboardMarkup(
+        inline_keyboard=custom_keyboard,
+        resize_keyboard=True
+    )
+
+
+def get_main_menu(start_product=0, offset_products=10, number_line_buttons=2):
     products = api.get_products()['data']
     end_index = min(start_product + offset_products, len(products))
     displayed_products = products[start_product: end_index]
@@ -240,7 +242,7 @@ def handler_cart(update: Update, context: CallbackContext):
         context.bot.send_message(
             chat_id=update.effective_chat.id,
             text='Введите ваш email, либо продолжите выбор:',
-            reply_markup=get_main_menu(restart=True)
+            reply_markup=get_restart_button()
         )
         return 'HANDLE_WAITING'
     id_cart_item = update.callback_query.data
@@ -290,7 +292,7 @@ def handle_waiting(update: Update, context: CallbackContext):
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=msg,
-        reply_markup=get_main_menu(restart=True),
+        reply_markup=get_restart_button(),
         parse_mode=PARSEMODE_HTML
     )
     return actual_return
@@ -398,7 +400,7 @@ def handle_location(update: Update, context: CallbackContext):
                    '''
         msg = f'{dedent(msg)}\n{AFTER_GEO_TEXT}'
     else:
-        reply_markup = get_main_menu(restart=True)
+        reply_markup = get_restart_button()
         msg = f'{THANK_TEXT}\n{REPIET_SEND_COORD}\n{AFTER_GEO_TEXT}'
 
     context.bot.send_message(
@@ -497,7 +499,7 @@ def precheckout_callback(update: Update, context: CallbackContext):
     context.bot.send_message(
         chat_id=update.effective_user.id,
         text='Хотите продолжить?',
-        reply_markup=get_main_menu(restart=True)
+        reply_markup=get_restart_button()
     )
     return 'START'
 
