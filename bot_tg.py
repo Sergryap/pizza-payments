@@ -5,10 +5,11 @@ import re
 import redis
 import requests
 import api_store as api
+import buttons as btn
 from textwrap import dedent
 from environs import Env
 from geo_informer import fetch_coordinates, get_min_distance_branch
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
+from telegram import Update, InlineKeyboardMarkup, LabeledPrice
 from telegram.ext import Filters, Updater, CallbackContext
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler, PreCheckoutQueryHandler
 from telegram.constants import PARSEMODE_HTML
@@ -34,71 +35,13 @@ DELIVERY_COST_1 = 100
 DELIVERY_COST_2 = 300
 
 
-def get_restart_button():
-    custom_keyboard = [[InlineKeyboardButton('Вернуться в меню', callback_data='/start')]]
-    return InlineKeyboardMarkup(
-        inline_keyboard=custom_keyboard,
-        resize_keyboard=True
-    )
-
-
-def get_main_menu(start_product=0, offset_products=10, number_line_buttons=2):
-    products = api.get_products()['data']
-    end_index = min(start_product + offset_products, len(products))
-    displayed_products = products[start_product: end_index]
-    custom_keyboard = []
-    button_line = []
-    for number, product in enumerate(displayed_products, start=1):
-        button_line.append(InlineKeyboardButton(product['attributes']['name'], callback_data=product['id']))
-        if len(button_line) == number_line_buttons or len(button_line) == 1 and number == len(displayed_products):
-            custom_keyboard.append(button_line)
-            button_line = []
-    next_product = end_index if len(products) > end_index else 0
-    previous_index = start_product - offset_products
-    previous_product = previous_index if previous_index >= 0 else len(products) - offset_products
-    custom_keyboard.append([
-        InlineKeyboardButton('<<<   Назад', callback_data=previous_product),
-        InlineKeyboardButton('Вперед   >>>', callback_data=next_product)
-    ])
-    custom_keyboard.append([InlineKeyboardButton('Корзина', callback_data='/cart')])
-    return InlineKeyboardMarkup(
-        inline_keyboard=custom_keyboard,
-        resize_keyboard=True
-    )
-
-
-def get_payment_menu(value):
-    custom_keyboard = [
-        [InlineKeyboardButton('Оплатить', callback_data=value)],
-        [InlineKeyboardButton('Вернуться в меню', callback_data='/start')]
-    ]
-    return InlineKeyboardMarkup(
-        inline_keyboard=custom_keyboard,
-        resize_keyboard=True
-    )
-
-
-def get_product_info_menu(product_id, price):
-    custom_keyboard = [
-        [InlineKeyboardButton('Добавить в корзину', callback_data=f'{product_id}:{price}')],
-        [
-            InlineKeyboardButton('Корзина', callback_data='/cart'),
-            InlineKeyboardButton('Меню', callback_data='/start')
-        ]
-    ]
-    return InlineKeyboardMarkup(
-        inline_keyboard=custom_keyboard,
-        resize_keyboard=True
-    )
-
-
 def start(update: Update, context: CallbackContext):
     login_user = update.effective_user.username
     os.environ[f'{login_user}_STEP_HANDLE'] = '1'
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=MENU_TEXT,
-        reply_markup=get_main_menu()
+        reply_markup=btn.get_main_menu()
     )
 
     return "HANDLE_MENU"
@@ -113,7 +56,7 @@ def send_product_info(update: Update, context: CallbackContext):
             chat_id=update.effective_chat.id,
             message_id=update.effective_message.message_id,
             text=MENU_TEXT,
-            reply_markup=get_main_menu(start_product)
+            reply_markup=btn.get_main_menu(start_product)
         )
         return "HANDLE_MENU"
     message_id = update.effective_message.message_id
@@ -142,7 +85,7 @@ def send_product_info(update: Update, context: CallbackContext):
     context.bot.send_message(
         chat_id,
         text=quantity_msg,
-        reply_markup=get_product_info_menu(product_id, price),
+        reply_markup=btn.get_product_info_menu(product_id, price),
         parse_mode=PARSEMODE_HTML
     )
     context.bot.delete_message(chat_id, message_id)
@@ -176,7 +119,7 @@ def handle_description(update: Update, context: CallbackContext):
         chat_id=update.effective_chat.id,
         message_id=update.effective_message.message_id,
         text=msg,
-        reply_markup=get_product_info_menu(product_id, price),
+        reply_markup=btn.get_product_info_menu(product_id, price),
         parse_mode=PARSEMODE_HTML
     )
     context.bot.answer_callback_query(
@@ -188,45 +131,8 @@ def handle_description(update: Update, context: CallbackContext):
     return "HANDLE_DESCRIPTION"
 
 
-def create_cart_msg(update: Update, delivery_address=None):
-    login_user = update.effective_user.username
-    total_value = (
-        api.get_cart(update.effective_user.id)
-        ['data']['meta']['display_price']['without_tax']['formatted']
-    )
-    cart_items = api.get_cart_items(update.effective_user.id)
-    msg = ''
-    custom_keyboard = []
-    for item in cart_items['data']:
-        msg += f'''
-                <b>{item['name']}</b>
-                {item['description']}
-                {item['meta']['display_price']['without_tax']['unit']['formatted']}
-                <i>{item['quantity']} шт. за {item['meta']['display_price']['without_tax']['value']['formatted']}</i>
-                '''
-        custom_keyboard.append(
-            [InlineKeyboardButton(f'Убрать из корзины: {item["name"]}', callback_data=item['id'])]
-        )
-    custom_keyboard.append([InlineKeyboardButton('Меню', callback_data='/start')])
-    custom_keyboard.append([InlineKeyboardButton('Оплата', callback_data='/pay')])
-    if not delivery_address:
-        summary_msg = f'''
-                {msg}        
-                <b>Общая стоимость: {total_value}</b>
-                '''
-    else:
-        summary_msg = f'''
-                {msg}        
-                <b>Общая стоимость: {total_value}</b>
-                   
-                <b>Адрес доставки: {delivery_address}</b>
-                <b>Телефон заказчика: {os.environ[f'{login_user}_PHONE']}</b>
-                '''
-    return summary_msg, custom_keyboard, total_value
-
-
 def get_cart_info(update: Update, context: CallbackContext):
-    msg, custom_keyboard, __ = create_cart_msg(update)
+    msg, custom_keyboard, __ = btn.create_cart_msg(update)
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=dedent(msg),
@@ -242,12 +148,12 @@ def handler_cart(update: Update, context: CallbackContext):
         context.bot.send_message(
             chat_id=update.effective_chat.id,
             text='Введите ваш email, либо продолжите выбор:',
-            reply_markup=get_restart_button()
+            reply_markup=btn.get_restart_button()
         )
         return 'HANDLE_WAITING'
     id_cart_item = update.callback_query.data
     api.remove_cart_item(update.effective_user.id, id_cart_item)
-    msg, custom_keyboard, __ = create_cart_msg(update)
+    msg, custom_keyboard, __ = btn.create_cart_msg(update)
     context.bot.edit_message_text(
         chat_id=update.effective_chat.id,
         message_id=update.effective_message.message_id,
@@ -292,33 +198,10 @@ def handle_waiting(update: Update, context: CallbackContext):
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=msg,
-        reply_markup=get_restart_button(),
+        reply_markup=btn.get_restart_button(),
         parse_mode=PARSEMODE_HTML
     )
     return actual_return
-
-
-def get_button_delivery(delivery: bool = True, pickup: bool = True):
-    if delivery and pickup:
-        custom_keyboard = [
-            [InlineKeyboardButton('Доставка', callback_data='delivery')],
-            [InlineKeyboardButton('Самовывоз', callback_data='pickup')],
-            [InlineKeyboardButton('Вернуться в меню', callback_data='/start')]
-        ]
-    elif not delivery and pickup:
-        custom_keyboard = [
-            [InlineKeyboardButton('Самовывоз', callback_data='pickup')],
-            [InlineKeyboardButton('Вернуться в меню', callback_data='/start')]
-        ]
-    else:
-        custom_keyboard = [
-            [InlineKeyboardButton('Вернуться в меню', callback_data='/start')]
-        ]
-
-    return InlineKeyboardMarkup(
-        inline_keyboard=custom_keyboard,
-        resize_keyboard=True
-    )
 
 
 def handle_location(update: Update, context: CallbackContext):
@@ -359,7 +242,7 @@ def handle_location(update: Update, context: CallbackContext):
                 resource_type='customer',
                 resource_id=os.environ[f'{login_user}_CURRENT_CUSTOMER_ID']
             )
-        reply_markup = get_button_delivery()
+        reply_markup = btn.get_delivery_buttons()
         if branch_dist <= 0.5:
             msg = f'''
                    Можете забрать пиццу из нашей пиццерии неподалеку?
@@ -383,7 +266,7 @@ def handle_location(update: Update, context: CallbackContext):
                    '''
             os.environ[f'{login_user}_DELIVERY_COST'] = str(DELIVERY_COST_2)
         elif branch_dist <= 50:
-            reply_markup = get_button_delivery(delivery=False)
+            reply_markup = btn.get_delivery_buttons(delivery=False)
             msg = f'''
                    Простите но так далеко мы пиццу не доставляем.
                    Ближайшая пиццерия от Вас в {round(branch_dist, 0)} км.
@@ -391,7 +274,7 @@ def handle_location(update: Update, context: CallbackContext):
                    Оформляем самовывоз?
                    '''
         else:
-            reply_markup = get_button_delivery(pickup=False)
+            reply_markup = btn.get_delivery_buttons(pickup=False)
             msg = f'''
                    Простите но так далеко мы пиццу не доставляем.
                    Ближайшая пиццерия от Вас в {round(branch_dist, 0)} км.
@@ -400,7 +283,7 @@ def handle_location(update: Update, context: CallbackContext):
                    '''
         msg = f'{dedent(msg)}\n{AFTER_GEO_TEXT}'
     else:
-        reply_markup = get_restart_button()
+        reply_markup = btn.get_restart_button()
         msg = f'{THANK_TEXT}\n{REPIET_SEND_COORD}\n{AFTER_GEO_TEXT}'
 
     context.bot.send_message(
@@ -433,7 +316,7 @@ def handle_delivery(update: Update, context: CallbackContext):
         delivery_latitude = os.environ[f'{login_user}_DELIVERY_LATITUDE']
         delivery_longitude = os.environ[f'{login_user}_DELIVERY_LONGITUDE']
         delivery_telegram_id = os.environ[f'{login_user}_DELIVERY_TELEGRAM_ID']
-        cart_msg, __, value = create_cart_msg(update, delivery_address=delivery_address)
+        cart_msg, __, value = btn.create_cart_msg(update, delivery_address=delivery_address)
         delivery_cost = int(os.environ[f'{login_user}_DELIVERY_COST'])
         total_value = int(''.join(value_pattern.search(value).groups())) + delivery_cost
         context.bot.send_message(
@@ -462,12 +345,12 @@ def handle_delivery(update: Update, context: CallbackContext):
             AFTER_PICKUP_ORDER_TIMER,
             context=update.effective_chat.id
         )
-        __, __, value = create_cart_msg(update)
+        __, __, value = btn.create_cart_msg(update)
         total_value = int(''.join(value_pattern.search(value).groups()))
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=dedent(msg),
-        reply_markup=get_payment_menu(total_value),
+        reply_markup=btn.get_payment_menu(total_value),
         parse_mode=PARSEMODE_HTML
     )
     return 'HANDLE_PAYMENT'
@@ -499,7 +382,7 @@ def precheckout_callback(update: Update, context: CallbackContext):
     context.bot.send_message(
         chat_id=update.effective_user.id,
         text='Хотите продолжить?',
-        reply_markup=get_restart_button()
+        reply_markup=btn.get_restart_button()
     )
     return 'START'
 
