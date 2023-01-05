@@ -424,7 +424,7 @@ def handle_delivery(update: Update, context: CallbackContext):
             latitude=float(delivery_latitude),
             longitude=float(delivery_longitude)
         )
-        context.job_queue.run_once(callback_alarm, 10, context=update.effective_chat.id)
+        context.job_queue.run_once(callback_after_order, 10, context=update.effective_chat.id)
     elif callback_data == 'pickup':
         msg = f'''
                Спасибо, что выбрали нашу пиццу.
@@ -440,7 +440,7 @@ def handle_delivery(update: Update, context: CallbackContext):
     return 'HANDLE_LOCATION'
 
 
-def callback_alarm(context: CallbackContext):
+def callback_after_order(context: CallbackContext):
     context.bot.send_message(
         chat_id=context.job.context,
         text=dedent(MESSAGE_AFTER_ORDER)
