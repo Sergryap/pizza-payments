@@ -224,6 +224,7 @@ def handle_location(update: Update, context: CallbackContext):
         user_phone = os.environ[f'{login_user}_PHONE']
         existing_entry = api.get_entry_by_pos(user_email, user_phone, current_pos)
         address = address if address else 'Пользователь не указал адрес'
+        current_lat, current_lng = current_pos
         if not existing_entry:
             customer_address_entry = api.create_entry(
                 flow_slug='customer-address',
@@ -231,8 +232,8 @@ def handle_location(update: Update, context: CallbackContext):
                     'address': address,
                     'email': user_email.lower().strip(),
                     'phone': user_phone,
-                    'latitude': current_pos[0],
-                    'longitude': current_pos[1]
+                    'latitude': current_lat,
+                    'longitude': current_lng
                 }
             )
             api.create_entry_relationship(
@@ -295,8 +296,8 @@ def handle_location(update: Update, context: CallbackContext):
     )
     if current_pos and branch_dist <= 50:
         os.environ[f'{login_user}_DELIVERY_ADDRESS'] = address
-        os.environ[f'{login_user}_DELIVERY_LATITUDE'] = str(current_pos[0])
-        os.environ[f'{login_user}_DELIVERY_LONGITUDE'] = str(current_pos[1])
+        os.environ[f'{login_user}_DELIVERY_LATITUDE'] = str(current_lat)
+        os.environ[f'{login_user}_DELIVERY_LONGITUDE'] = str(current_lng)
         os.environ[f'{login_user}_DELIVERY_TELEGRAM_ID'] = telegram_id
         os.environ[f'{login_user}_BRANCH_ADDRESS'] = branch_address
         os.environ[f'{login_user}_DELIVERY_COST'] = delivery_cost
