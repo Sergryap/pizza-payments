@@ -15,6 +15,7 @@ def upload_file(file):
 def upload_products(file='menu.json'):
     products = upload_file(file)
     for product in products:
+        print(f'Загружаю данные для {product["name"]}')
         try:
             created_product = api.create_pcm_product(
                 name=product['name'],
