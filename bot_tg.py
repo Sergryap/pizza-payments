@@ -464,7 +464,7 @@ if __name__ == '__main__':
     updater.logger.warning('Бот Telegram "pizza-payments" запущен')
     dispatcher.add_handler(PreCheckoutQueryHandler(handle_users_reply))
     dispatcher.add_handler(CallbackQueryHandler(handle_users_reply, pass_job_queue=True))
-    dispatcher.add_handler(MessageHandler(Filters.location, handle_location))
+    dispatcher.add_handler(MessageHandler(Filters.location, handle_users_reply))
     dispatcher.add_handler(MessageHandler(Filters.text, handle_users_reply))
     dispatcher.add_handler(CommandHandler('start', handle_users_reply))
     updater.start_polling()
