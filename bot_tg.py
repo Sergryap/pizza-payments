@@ -1,7 +1,6 @@
 import logging
 import os
 import re
-from pprint import pprint
 
 import redis
 import requests
@@ -9,9 +8,9 @@ import api_store as api
 from textwrap import dedent
 from environs import Env
 from geo_informer import fetch_coordinates, get_min_distance_branch
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Filters, Updater, CallbackContext, ContextTypes
-from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
+from telegram.ext import Filters, Updater, CallbackContext
+from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler, PreCheckoutQueryHandler
 from telegram.constants import PARSEMODE_HTML
 
 from logger import BotLogsHandler
@@ -31,6 +30,8 @@ MESSAGE_AFTER_ORDER = f'''
 MESSAGE_AFTER_PICKUP_ORDER = 'Ваш заказ уже готов и ждет вас!'
 AFTER_ORDER_TIMER = 3600
 AFTER_PICKUP_ORDER_TIMER = 1200
+DELIVERY_COST_1 = 100
+DELIVERY_COST_2 = 300
 
 
 def get_main_menu(start_product=0, offset_products=10, number_line_buttons=2, restart=False):
@@ -58,6 +59,17 @@ def get_main_menu(start_product=0, offset_products=10, number_line_buttons=2, re
         InlineKeyboardButton('Вперед   >>>', callback_data=next_product)
     ])
     custom_keyboard.append([InlineKeyboardButton('Корзина', callback_data='/cart')])
+    return InlineKeyboardMarkup(
+        inline_keyboard=custom_keyboard,
+        resize_keyboard=True
+    )
+
+
+def get_payment_menu(value):
+    custom_keyboard = [
+        [InlineKeyboardButton('Оплатить', callback_data=value)],
+        [InlineKeyboardButton('Вернуться в меню', callback_data='/start')]
+    ]
     return InlineKeyboardMarkup(
         inline_keyboard=custom_keyboard,
         resize_keyboard=True
@@ -208,11 +220,11 @@ def create_cart_msg(update: Update, delivery_address=None):
                 <b>Адрес доставки: {delivery_address}</b>
                 <b>Телефон заказчика: {os.environ[f'{login_user}_PHONE']}</b>
                 '''
-    return summary_msg, custom_keyboard
+    return summary_msg, custom_keyboard, total_value
 
 
 def get_cart_info(update: Update, context: CallbackContext):
-    msg, custom_keyboard = create_cart_msg(update)
+    msg, custom_keyboard, __ = create_cart_msg(update)
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=dedent(msg),
@@ -233,7 +245,7 @@ def handler_cart(update: Update, context: CallbackContext):
         return 'HANDLE_WAITING'
     id_cart_item = update.callback_query.data
     api.remove_cart_item(update.effective_user.id, id_cart_item)
-    msg, custom_keyboard = create_cart_msg(update)
+    msg, custom_keyboard, __ = create_cart_msg(update)
     context.bot.edit_message_text(
         chat_id=update.effective_chat.id,
         message_id=update.effective_message.message_id,
@@ -356,13 +368,13 @@ def handle_location(update: Update, context: CallbackContext):
         elif branch_dist <= 5:
             msg = f'''
                    Похоже придется ехать до Вас на самокате.
-                   Доставка будет стоить 100 р.
+                   Доставка будет стоить {DELIVERY_COST_1} р.
                    Доставляем или самовывоз?
                    '''
         elif branch_dist <= 20:
             msg = f'''
                    Похоже придется ехать до Вас на автомобиле.
-                   Доставка будет стоить 300 р.
+                   Доставка будет стоить {DELIVERY_COST_2} р.
                    Доставляем или самовывоз?
                    '''
         elif branch_dist <= 50:
@@ -415,7 +427,7 @@ def handle_delivery(update: Update, context: CallbackContext):
         delivery_latitude = os.environ[f'{login_user}_DELIVERY_LATITUDE']
         delivery_longitude = os.environ[f'{login_user}_DELIVERY_LONGITUDE']
         delivery_telegram_id = os.environ[f'{login_user}_DELIVERY_TELEGRAM_ID']
-        cart_msg, __ = create_cart_msg(update, delivery_address=delivery_address)
+        cart_msg, __, total_value = create_cart_msg(update, delivery_address=delivery_address)
 
         context.bot.send_message(
             chat_id=delivery_telegram_id,
@@ -443,13 +455,48 @@ def handle_delivery(update: Update, context: CallbackContext):
             AFTER_PICKUP_ORDER_TIMER,
             context=update.effective_chat.id
         )
+        __, __, total_value = create_cart_msg(update)
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=dedent(msg),
-        reply_markup=get_main_menu(restart=True),
+        reply_markup=get_payment_menu(total_value),
         parse_mode=PARSEMODE_HTML
     )
-    return 'HANDLE_LOCATION'
+    return 'HANDLE_PAYMENT'
+
+
+def handle_payment(update: Update, context: CallbackContext):
+    callback_data = update.callback_query.data
+    login_user = update.effective_user.username
+    value_pattern = re.compile(r'(\d+),(\d*)')
+    total_value = int(''.join(value_pattern.search(callback_data).groups()))
+    context.bot.send_invoice(
+        chat_id=update.effective_chat.id,
+        title='Оплата заказа в pizza-store',
+        description='Payment Example using python-telegram-bot',
+        payload='Custom-Payload',
+        provider_token=os.environ['PROVIDER_TOKEN'],
+        currency='RUB',
+        prices=[LabeledPrice('Test', total_value * 100)]
+    )
+    return 'PRECHECKOUT'
+
+
+def precheckout_callback(update: Update, context: CallbackContext):
+    query = update.pre_checkout_query
+    if query.invoice_payload != 'Custom-Payload':
+        context.bot.answer_pre_checkout_query(
+            pre_checkout_query_id=query.id,
+            ok=False,
+            error_message="Something went wrong...")
+    else:
+        context.bot.answer_pre_checkout_query(pre_checkout_query_id=query.id, ok=True)
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text='Хотите продолжить?',
+        reply_markup=get_main_menu(restart=True)
+    )
+    return 'START'
 
 
 def callback_after_order(context: CallbackContext):
@@ -474,6 +521,9 @@ def handle_users_reply(update: Update, context: CallbackContext):
     elif update.callback_query:
         user_reply = update.callback_query.data
         chat_id = update.callback_query.message.chat_id
+    elif update.pre_checkout_query:
+        user_reply = ''
+        chat_id = update.effective_user.id
     else:
         return
     if user_reply == '/start':
@@ -489,6 +539,8 @@ def handle_users_reply(update: Update, context: CallbackContext):
         'HANDLE_WAITING': handle_waiting,
         'HANDLE_LOCATION': handle_location,
         'HANDLE_DELIVERY': handle_delivery,
+        'HANDLE_PAYMENT': handle_payment,
+        'PRECHECKOUT': precheckout_callback,
     }
     state_handler = states_functions[user_state]
     try:
@@ -519,6 +571,7 @@ if __name__ == '__main__':
     dispatcher = updater.dispatcher
     dispatcher.redis = redis.Redis(host=database_host, port=database_port, password=database_password)
     updater.logger.warning('Бот Telegram "pizza-payments" запущен')
+    dispatcher.add_handler(PreCheckoutQueryHandler(handle_users_reply))
     dispatcher.add_handler(CallbackQueryHandler(handle_users_reply, pass_job_queue=True))
     dispatcher.add_handler(MessageHandler(Filters.location, handle_location))
     dispatcher.add_handler(MessageHandler(Filters.text, handle_users_reply))
