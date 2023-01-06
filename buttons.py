@@ -3,8 +3,10 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 import api_store as api
 
 
-def get_restart_button():
+def get_restart_button(skip=False):
     custom_keyboard = [[InlineKeyboardButton('Вернуться в меню', callback_data='/start')]]
+    if skip:
+        custom_keyboard.append([InlineKeyboardButton('Пропустить', callback_data='/skip')])
     return InlineKeyboardMarkup(
         inline_keyboard=custom_keyboard,
         resize_keyboard=True

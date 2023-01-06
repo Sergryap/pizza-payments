@@ -148,7 +148,7 @@ def handler_cart(update: Update, context: CallbackContext):
         context.bot.send_message(
             chat_id=update.effective_chat.id,
             text='Введите ваш email, либо продолжите выбор:',
-            reply_markup=btn.get_restart_button()
+            reply_markup=btn.get_restart_button(skip=True)
         )
         return 'HANDLE_WAITING'
     id_cart_item = update.callback_query.data
@@ -166,9 +166,10 @@ def handler_cart(update: Update, context: CallbackContext):
 
 def handle_waiting(update: Update, context: CallbackContext):
     login_user = update.effective_user.username
+    callback_data = update.callback_query.data if update.callback_query else None
     if os.environ.get(f'{login_user}_STEP_HANDLE', '1') == '1':
         actual_return = 'HANDLE_WAITING'
-        user_email = update.message.text.lower().strip()
+        user_email = 'none@none.com' if callback_data == '/skip' else update.message.text.lower().strip()
         email_rule = re.compile(r'(^\S+@\S+\.\S+$)', flags=re.IGNORECASE)
         if email_rule.search(user_email):
             os.environ[f'{login_user}_EMAIL'] = user_email
