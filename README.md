@@ -1,6 +1,9 @@
 ## On-line магазин пиццы в виде бота Telegram
 #### Пример работающего бота: [Bot](https://t.me/pizza_sergryap_bot)
 
+![animation1](https://user-images.githubusercontent.com/99894266/210982091-844ba29f-75d2-4629-a7a9-06ea9fcbf685.gif)
+
+
 Интернет магазин создан на базе API сервиса [Moltin](https://www.moltin.com/).
 
 В представленной программе реализованы основные методы взаимодействия покупателя с магазином:
