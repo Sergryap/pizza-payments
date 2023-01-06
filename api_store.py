@@ -473,6 +473,41 @@ def get_entry_by_pos(email: str, phone: str, customer_pos: tuple, flow_slug='cus
     )
 
 
+def checkout_cart(reference, customer_id, first_name, last_name, address, phone_number):
+    url = f'https://api.moltin.com/v2/carts/{reference}/checkout'
+    headers = {
+        'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}',
+        'Content-Type': 'application/json'
+    }
+    json_data = {
+        'data': {
+            'customer': {
+                'id': customer_id
+            },
+            'billing_address': {
+                'first_name': first_name,
+                'last_name': last_name,
+                'line_1': address,
+                'region': 'Russia',
+                'postcode': '1',
+                'country': 'RU'
+            },
+            'shipping_address': {
+                'first_name': first_name,
+                'last_name': last_name,
+                'phone_number': phone_number,
+                'line_1': address,
+                'region': 'Russia',
+                'postcode': '1',
+                'country': 'RU'
+            }
+        }
+    }
+    response = requests.post(url, headers=headers, json=json_data)
+    response.raise_for_status()
+    return response.json()
+
+
 if __name__ == '__main__':
     env = Env()
     env.read_env()
