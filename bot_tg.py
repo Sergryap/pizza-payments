@@ -150,7 +150,7 @@ def handler_cart(update: Update, context: CallbackContext):
             text='Введите ваш email, либо продолжите выбор:',
             reply_markup=btn.get_restart_button(skip=True)
         )
-        return 'HANDLE_WAITING'
+        return 'HANDLE_EMAIL'
     id_cart_item = update.callback_query.data
     api.remove_cart_item(update.effective_user.id, id_cart_item)
     msg, custom_keyboard, __ = btn.create_cart_msg(update)
@@ -164,44 +164,54 @@ def handler_cart(update: Update, context: CallbackContext):
     return 'HANDLER_CART'
 
 
-def handle_waiting(update: Update, context: CallbackContext):
+def handle_email(update: Update, context: CallbackContext):
     login_user = update.effective_user.username
     callback_data = update.callback_query.data if update.callback_query else None
-    if os.environ.get(f'{login_user}_STEP_HANDLE', '1') == '1':
-        actual_return = 'HANDLE_WAITING'
-        user_email = 'none@none.com' if callback_data == '/skip' else update.message.text.lower().strip()
-        email_rule = re.compile(r'(^\S+@\S+\.\S+$)', flags=re.IGNORECASE)
-        if email_rule.search(user_email):
-            os.environ[f'{login_user}_EMAIL'] = user_email
-            msg = 'Введите Ваш телефон'
-            try:
-                os.environ[f'{login_user}_STEP_HANDLE'] = '2'
-                customer = api.create_customer(login_user, user_email)
-                os.environ[f'{login_user}_CUSTOMER_ID'] = customer['data']['id']
-            except requests.exceptions.HTTPError:
-                found_user = api.get_all_customers(user_email)
-                os.environ[f'{login_user}_CUSTOMER_ID'] = found_user['data'][0].get('id')
-        else:
-            msg = f'Введите корректный email'
-            os.environ[f'{login_user}_STEP_HANDLE'] = '1'
-    elif os.environ[f'{login_user}_STEP_HANDLE'] == '2':
-        user_phone = update.message.text
-        phone_rule = re.compile(r'(^[+0-9]{1,3})*([0-9]{10,11}$)')
-        if phone_rule.search(user_phone):
-            actual_return = 'HANDLE_LOCATION'
-            os.environ[f'{login_user}_STEP_HANDLE'] = '1'
-            os.environ[f'{login_user}_PHONE'] = user_phone
-            msg = f'{THANK_TEXT}\n{GEO_REQUEST_TEXT}\n{AFTER_EMAIL_TEXT}'
-        else:
-            actual_return = 'HANDLE_WAITING'
-            msg = f'Введите корректный номер телефона'
+    user_email = 'none@none.com' if callback_data == '/skip' else update.message.text.lower().strip()
+    email_rule = re.compile(r'(^\S+@\S+\.\S+$)', flags=re.IGNORECASE)
+    if email_rule.search(user_email):
+        actual_return = 'HANDLE_PHONE'
+        os.environ[f'{login_user}_EMAIL'] = user_email
+        msg = 'Введите Ваш телефон'
+        skip = False
+        try:
+            customer = api.create_customer(login_user, user_email)
+            os.environ[f'{login_user}_CUSTOMER_ID'] = customer['data']['id']
+        except requests.exceptions.HTTPError:
+            found_user = api.get_all_customers(user_email)
+            os.environ[f'{login_user}_CUSTOMER_ID'] = found_user['data'][0].get('id')
+    else:
+        msg = f'Введите корректный email'
+        actual_return = 'HANDLE_EMAIL'
+        skip = True
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=msg,
+        reply_markup=btn.get_restart_button(skip=skip),
+        parse_mode=PARSEMODE_HTML
+    )
 
+    return actual_return
+
+
+def handle_phone(update: Update, context: CallbackContext):
+    login_user = update.effective_user.username
+    user_phone = update.message.text
+    phone_rule = re.compile(r'(^[+0-9]{1,3})*([0-9]{10,11}$)')
+    if phone_rule.search(user_phone):
+        actual_return = 'HANDLE_LOCATION'
+        os.environ[f'{login_user}_PHONE'] = user_phone
+        msg = f'{THANK_TEXT}\n{GEO_REQUEST_TEXT}\n{AFTER_EMAIL_TEXT}'
+    else:
+        actual_return = 'HANDLE_PHONE'
+        msg = f'Введите корректный номер телефона'
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=msg,
         reply_markup=btn.get_restart_button(),
         parse_mode=PARSEMODE_HTML
     )
+
     return actual_return
 
 
@@ -436,7 +446,8 @@ def handle_users_reply(update: Update, context: CallbackContext):
         'HANDLE_DESCRIPTION': handle_description,
         'CART_INFO': get_cart_info,
         'HANDLER_CART':  handler_cart,
-        'HANDLE_WAITING': handle_waiting,
+        'HANDLE_EMAIL': handle_email,
+        'HANDLE_PHONE': handle_phone,
         'HANDLE_LOCATION': handle_location,
         'HANDLE_DELIVERY': handle_delivery,
         'HANDLE_PAYMENT': handle_payment,
