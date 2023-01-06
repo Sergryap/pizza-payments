@@ -295,6 +295,14 @@ def handle_location(update: Update, context: CallbackContext):
         parse_mode=PARSEMODE_HTML
     )
     if current_pos and branch_dist <= 50:
+        api.checkout_cart(
+            reference=update.effective_user.id,
+            customer_id=os.environ[f'{login_user}_CUSTOMER_ID'],
+            first_name=update.effective_user.first_name,
+            last_name=update.effective_user.last_name,
+            address=address,
+            phone_number=os.environ[f'{login_user}_PHONE']
+        )
         os.environ[f'{login_user}_DELIVERY_ADDRESS'] = address
         os.environ[f'{login_user}_DELIVERY_LATITUDE'] = str(current_lat)
         os.environ[f'{login_user}_DELIVERY_LONGITUDE'] = str(current_lng)
