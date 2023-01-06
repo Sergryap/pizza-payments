@@ -176,10 +176,10 @@ def handle_waiting(update: Update, context: CallbackContext):
             try:
                 os.environ[f'{login_user}_STEP_HANDLE'] = '2'
                 customer = api.create_customer(login_user, user_email)
-                os.environ[f'{login_user}_CURRENT_CUSTOMER_ID'] = customer['data']['id']
+                os.environ[f'{login_user}_CUSTOMER_ID'] = customer['data']['id']
             except requests.exceptions.HTTPError:
                 found_user = api.get_all_customers(user_email)
-                os.environ[f'{login_user}_CURRENT_CUSTOMER_ID'] = found_user['data'][0].get('id')
+                os.environ[f'{login_user}_CUSTOMER_ID'] = found_user['data'][0].get('id')
         else:
             msg = f'Введите корректный email'
             os.environ[f'{login_user}_STEP_HANDLE'] = '1'
@@ -241,7 +241,7 @@ def handle_location(update: Update, context: CallbackContext):
                 entry_id=customer_address_entry['data']['id'],
                 field_slug='customer',
                 resource_type='customer',
-                resource_id=os.environ[f'{login_user}_CURRENT_CUSTOMER_ID']
+                resource_id=os.environ[f'{login_user}_CUSTOMER_ID']
             )
         reply_markup = btn.get_delivery_buttons()
         if branch_dist <= 0.5:
