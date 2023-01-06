@@ -86,6 +86,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 ![Снимок экрана от 2023-01-06 13-37-03](https://user-images.githubusercontent.com/99894266/210973167-ba176515-5f1e-4725-a289-60b012ff0e59.png)
+
 ![Снимок экрана от 2023-01-06 13-38-25](https://user-images.githubusercontent.com/99894266/210973282-e5198a39-adc7-4f53-b7c2-93573cc18b30.png)
 
 7. Запустите бота:
