@@ -22,7 +22,6 @@ def check_token(error=False):
         token_data = response.json()
         os.environ['TOKEN_EXPIRES'] = str(token_data['expires'] - 60)
         os.environ['ACCESS_TOKEN'] = token_data['access_token']
-        pprint(token_data)
 
 
 def create_product(name: str, sku: str, description: str, price: int):
@@ -161,7 +160,6 @@ def create_relationships_to_products(
     }
     json_data = {'data': []}
     for product in products['data']:
-        print(product['id'])
         json_data['data'].append(
             {
                 'type': 'product',

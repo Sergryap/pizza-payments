@@ -460,7 +460,6 @@ def handle_users_reply(update: Update, context: CallbackContext):
     except Exception as err:
         api.check_token(error=True)
         next_state = state_handler(update, context)
-        print(err)
     db.set(chat_id, next_state)
 
 
