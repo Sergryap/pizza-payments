@@ -378,6 +378,7 @@ def handle_delivery(update: Update, context: CallbackContext):
         reply_markup=btn.get_payment_menu(total_value),
         parse_mode=PARSEMODE_HTML
     )
+    del context.user_data[f'{login_user}_data']
     return 'HANDLE_PAYMENT'
 
 
