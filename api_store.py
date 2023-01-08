@@ -4,7 +4,6 @@ import requests
 
 from environs import Env
 from slugify import slugify
-from pprint import pprint
 
 
 def check_token():
