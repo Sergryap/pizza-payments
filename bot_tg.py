@@ -1,8 +1,6 @@
 import logging
 import os
 import re
-import time
-
 import redis
 import requests
 import api_store as api
