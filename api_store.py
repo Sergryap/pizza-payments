@@ -7,8 +7,8 @@ from slugify import slugify
 from pprint import pprint
 
 
-def check_token(error=False):
-    if not os.environ.get('TOKEN_EXPIRES') or int(os.environ['TOKEN_EXPIRES']) < int(time.time()) or error:
+def check_token():
+    if not os.environ.get('TOKEN_EXPIRES') or int(os.environ['TOKEN_EXPIRES']) < int(time.time()):
         url = 'https://api.moltin.com/oauth/access_token'
         client_id = os.getenv('CLIENT_ID')
         client_secret = os.getenv('CLIENT_SECRET')
