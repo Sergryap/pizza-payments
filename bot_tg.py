@@ -458,12 +458,8 @@ def handle_users_reply(update: Update, context: CallbackContext):
         'PRECHECKOUT': precheckout_callback,
     }
     state_handler = states_functions[user_state]
-    try:
-        api.check_token()
-        next_state = state_handler(update, context)
-    except Exception as err:
-        time.sleep(2)
-        next_state = state_handler(update, context)
+    api.check_token()
+    next_state = state_handler(update, context)
     db.set(chat_id, next_state)
 
 
