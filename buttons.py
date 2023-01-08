@@ -1,5 +1,6 @@
-import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import CallbackContext
+
 import api_store as api
 
 
@@ -86,7 +87,7 @@ def get_delivery_buttons(delivery: bool = True, pickup: bool = True):
     )
 
 
-def create_cart_msg(update: Update, delivery_address=None):
+def create_cart_msg(update: Update, context: CallbackContext, delivery_address=None):
     login_user = update.effective_user.username
     total_value = (
         api.get_cart(update.effective_user.id)
@@ -118,6 +119,6 @@ def create_cart_msg(update: Update, delivery_address=None):
                 <b>Общая стоимость: {total_value}</b>
 
                 <b>Адрес доставки: {delivery_address}</b>
-                <b>Телефон заказчика: {os.environ[f'{login_user}_PHONE']}</b>
+                <b>Телефон заказчика: {context.user_data[f'{login_user}_data']['phone']}</b>
                 '''
     return summary_msg, custom_keyboard, total_value

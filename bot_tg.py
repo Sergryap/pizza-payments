@@ -38,7 +38,6 @@ DELIVERY_COST_2 = 300
 
 def start(update: Update, context: CallbackContext):
     login_user = update.effective_user.username
-    os.environ[f'{login_user}_STEP_HANDLE'] = '1'
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=MENU_TEXT,
@@ -133,7 +132,7 @@ def handle_description(update: Update, context: CallbackContext):
 
 
 def get_cart_info(update: Update, context: CallbackContext):
-    msg, custom_keyboard, __ = btn.create_cart_msg(update)
+    msg, custom_keyboard, __ = btn.create_cart_msg(update, context)
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=dedent(msg),
@@ -154,7 +153,7 @@ def handler_cart(update: Update, context: CallbackContext):
         return 'HANDLE_EMAIL'
     id_cart_item = update.callback_query.data
     api.remove_cart_item(update.effective_user.id, id_cart_item)
-    msg, custom_keyboard, __ = btn.create_cart_msg(update)
+    msg, custom_keyboard, __ = btn.create_cart_msg(update, context)
     context.bot.edit_message_text(
         chat_id=update.effective_chat.id,
         message_id=update.effective_message.message_id,
@@ -172,15 +171,15 @@ def handle_email(update: Update, context: CallbackContext):
     email_rule = re.compile(r'(^\S+@\S+\.\S+$)', flags=re.IGNORECASE)
     if email_rule.search(user_email):
         actual_return = 'HANDLE_PHONE'
-        os.environ[f'{login_user}_EMAIL'] = user_email
+        context.user_data[f'{login_user}_data'] = {'email': user_email}
         msg = 'Введите Ваш телефон'
         skip = False
         try:
             customer = api.create_customer(login_user, user_email)
-            os.environ[f'{login_user}_CUSTOMER_ID'] = customer['data']['id']
+            context.user_data[f'{login_user}_data'].update({'customer_id': customer['data']['id']})
         except requests.exceptions.HTTPError:
             found_user = api.get_all_customers(user_email)
-            os.environ[f'{login_user}_CUSTOMER_ID'] = found_user['data'][0].get('id')
+            context.user_data[f'{login_user}_data'].update({'customer_id': found_user['data'][0].get('id')})
     else:
         msg = f'Введите корректный email'
         actual_return = 'HANDLE_EMAIL'
@@ -201,7 +200,7 @@ def handle_phone(update: Update, context: CallbackContext):
     phone_rule = re.compile(r'(^[+0-9]{1,3})*([0-9]{10,11}$)')
     if phone_rule.search(user_phone):
         actual_return = 'HANDLE_LOCATION'
-        os.environ[f'{login_user}_PHONE'] = user_phone
+        context.user_data[f'{login_user}_data'].update({'phone': user_phone})
         msg = f'{THANK_TEXT}\n{GEO_REQUEST_TEXT}\n{AFTER_EMAIL_TEXT}'
     else:
         actual_return = 'HANDLE_PHONE'
@@ -232,8 +231,8 @@ def handle_location(update: Update, context: CallbackContext):
 
     if current_pos:
         branch_address, branch_dist, telegram_id = get_min_distance_branch(current_pos)
-        user_email = os.environ[f'{login_user}_EMAIL']
-        user_phone = os.environ[f'{login_user}_PHONE']
+        user_email = context.user_data[f'{login_user}_data']['email']
+        user_phone = context.user_data[f'{login_user}_data']['phone']
         existing_entry = api.get_entry_by_pos(user_email, user_phone, current_pos)
         address = address if address else 'Пользователь не указал адрес'
         current_lat, current_lng = current_pos
@@ -253,7 +252,7 @@ def handle_location(update: Update, context: CallbackContext):
                 entry_id=customer_address_entry['data']['id'],
                 field_slug='customer',
                 resource_type='customer',
-                resource_id=os.environ[f'{login_user}_CUSTOMER_ID']
+                resource_id=context.user_data[f'{login_user}_data']['customer_id']
             )
         reply_markup = btn.get_delivery_buttons()
         if branch_dist <= 0.5:
@@ -263,21 +262,21 @@ def handle_location(update: Update, context: CallbackContext):
                    Вот её адрес: {branch_address}.
                    А можем и бесплатно доставить нам не сложно.
                    '''
-            delivery_cost = '0'
+            delivery_cost = 0
         elif branch_dist <= 5:
             msg = f'''
                    Похоже придется ехать до Вас на самокате.
                    Доставка будет стоить {DELIVERY_COST_1} р.
                    Доставляем или самовывоз?
                    '''
-            delivery_cost = str(DELIVERY_COST_1)
+            delivery_cost = DELIVERY_COST_1
         elif branch_dist <= 20:
             msg = f'''
                    Похоже придется ехать до Вас на автомобиле.
                    Доставка будет стоить {DELIVERY_COST_2} р.
                    Доставляем или самовывоз?
                    '''
-            delivery_cost = str(DELIVERY_COST_2)
+            delivery_cost = DELIVERY_COST_2
         elif branch_dist <= 50:
             reply_markup = btn.get_delivery_buttons(delivery=False)
             msg = f'''
@@ -286,7 +285,7 @@ def handle_location(update: Update, context: CallbackContext):
                    Но вы может забрать её самостоятельно.
                    Оформляем самовывоз?
                    '''
-            delivery_cost = '0'
+            delivery_cost = 0
         else:
             reply_markup = btn.get_delivery_buttons(pickup=False)
             msg = f'''
@@ -309,18 +308,20 @@ def handle_location(update: Update, context: CallbackContext):
     if current_pos and branch_dist <= 50:
         api.checkout_cart(
             reference=update.effective_user.id,
-            customer_id=os.environ[f'{login_user}_CUSTOMER_ID'],
+            customer_id=context.user_data[f'{login_user}_data']['customer_id'],
             first_name=update.effective_user.first_name,
             last_name=update.effective_user.last_name,
             address=address,
-            phone_number=os.environ[f'{login_user}_PHONE']
+            phone_number=context.user_data[f'{login_user}_data']['phone']
         )
-        os.environ[f'{login_user}_DELIVERY_ADDRESS'] = address
-        os.environ[f'{login_user}_DELIVERY_LATITUDE'] = str(current_lat)
-        os.environ[f'{login_user}_DELIVERY_LONGITUDE'] = str(current_lng)
-        os.environ[f'{login_user}_DELIVERY_TELEGRAM_ID'] = telegram_id
-        os.environ[f'{login_user}_BRANCH_ADDRESS'] = branch_address
-        os.environ[f'{login_user}_DELIVERY_COST'] = delivery_cost
+        context.user_data[f'{login_user}_data'].update({
+            'address': address,
+            'current_lat': current_lat,
+            'current_lng': current_lng,
+            'telegram_id': telegram_id,
+            'branch_address': branch_address,
+            'delivery_cost': delivery_cost
+        })
 
         return 'HANDLE_DELIVERY'
     return 'HANDLE_LOCATION'
@@ -335,12 +336,13 @@ def handle_delivery(update: Update, context: CallbackContext):
                Спасибо, что выбрали нашу пиццу.
                Ваш заказ уже готовиться и скоро будет доставлен.
                '''
-        delivery_address = os.environ[f'{login_user}_DELIVERY_ADDRESS']
-        delivery_latitude = os.environ[f'{login_user}_DELIVERY_LATITUDE']
-        delivery_longitude = os.environ[f'{login_user}_DELIVERY_LONGITUDE']
-        delivery_telegram_id = os.environ[f'{login_user}_DELIVERY_TELEGRAM_ID']
-        cart_msg, __, value = btn.create_cart_msg(update, delivery_address=delivery_address)
-        delivery_cost = int(os.environ[f'{login_user}_DELIVERY_COST'])
+        user_data = context.user_data[f'{login_user}_data']
+        delivery_address = user_data['address']
+        delivery_latitude = user_data['current_lat']
+        delivery_longitude = user_data['current_lng']
+        delivery_telegram_id = user_data['telegram_id']
+        cart_msg, __, value = btn.create_cart_msg(update, context, delivery_address=delivery_address)
+        delivery_cost = user_data['delivery_cost']
         total_value = int(''.join(value_pattern.search(value).groups())) + delivery_cost
         context.bot.send_message(
             chat_id=delivery_telegram_id,
@@ -361,14 +363,14 @@ def handle_delivery(update: Update, context: CallbackContext):
         msg = f'''
                Спасибо, что выбрали нашу пиццу.
                Вы можете забрать свой заказ по адресу:
-               <b>{os.environ[f'{login_user}_BRANCH_ADDRESS']}</b>
+               <b>{context.user_data[f'{login_user}_data']['branch_address']}</b>
                '''
         context.job_queue.run_once(
             callback_after_pickup_order,
             AFTER_PICKUP_ORDER_TIMER,
             context=update.effective_chat.id
         )
-        __, __, value = btn.create_cart_msg(update)
+        __, __, value = btn.create_cart_msg(update, context)
         total_value = int(''.join(value_pattern.search(value).groups()))
     context.bot.send_message(
         chat_id=update.effective_chat.id,
