@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import time
 
 import redis
 import requests
@@ -458,7 +459,7 @@ def handle_users_reply(update: Update, context: CallbackContext):
         api.check_token()
         next_state = state_handler(update, context)
     except Exception as err:
-        api.check_token(error=True)
+        time.sleep(2)
         next_state = state_handler(update, context)
     db.set(chat_id, next_state)
 
