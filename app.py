@@ -1,4 +1,5 @@
 import os
+import api_store as api
 
 import requests
 from flask import Flask, request
@@ -26,6 +27,7 @@ def webhook():
     Основной вебхук, на который будут приходить сообщения от Facebook.
     """
     data = request.get_json()
+    api.check_token()
     if data["object"] == "page":
         for entry in data["entry"]:
             for messaging_event in entry["messaging"]:
@@ -34,6 +36,8 @@ def webhook():
                     recipient_id = messaging_event["recipient"]["id"]
                     message_text = messaging_event["message"]["text"]
                     send_message(sender_id, message_text)
+                    send_menu(sender_id)
+
     return "ok", 200
 
 
@@ -53,6 +57,55 @@ def send_message(recipient_id, message_text):
         params=params, headers=headers, json=request_content
     )
     response.raise_for_status()
+
+
+def send_menu(recipient_id):
+    products = api.get_products()['data']
+    elements = []
+    several_json_data = []
+    for number, product in enumerate(products, start=1):
+        buttons = [
+            {
+                'type': 'postback',
+                'title': 'Добавить в корзину',
+                'payload': product['id'],
+            }
+        ]
+        elements.append(
+            {
+                'title': f'{product["attributes"]["name"]} ({product["attributes"]["price"]["RUB"]["amount"]} р.)',
+                'subtitle': product['attributes'].get('description', ''),
+                'buttons': buttons
+            },
+        )
+        if number % 10 == 0 or number == len(products):
+            several_json_data.append(
+                {
+                    'recipient': {
+                        'id': recipient_id,
+                    },
+                    'message': {
+                        'attachment': {
+                            'type': 'template',
+                            'payload': {
+                                'template_type': 'generic',
+                                'elements': elements
+                            },
+                        },
+                    },
+                }
+            )
+            elements = []
+
+    url = "https://graph.facebook.com/v2.6/me/messages"
+    params = {"access_token": FACEBOOK_TOKEN}
+    headers = {"Content-Type": "application/json"}
+    for json_data in several_json_data:
+        response = requests.post(
+            url=url,
+            params=params, headers=headers, json=json_data
+        )
+        response.raise_for_status()
 
 
 if __name__ == '__main__':
