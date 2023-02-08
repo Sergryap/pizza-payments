@@ -64,6 +64,8 @@ def send_menu(recipient_id):
     elements = []
     several_json_data = []
     for number, product in enumerate(products, start=1):
+        main_image_id = product['relationships']['main_image']['data']['id']
+        link_image = api.get_file(file_id=main_image_id)['data']['link']['href']
         buttons = [
             {
                 'type': 'postback',
@@ -74,6 +76,7 @@ def send_menu(recipient_id):
         elements.append(
             {
                 'title': f'{product["attributes"]["name"]} ({product["attributes"]["price"]["RUB"]["amount"]} р.)',
+                'image_url': link_image,
                 'subtitle': product['attributes'].get('description', ''),
                 'buttons': buttons
             },
