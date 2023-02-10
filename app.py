@@ -90,7 +90,7 @@ def send_menu(recipient_id):
             ]
         }
     ]
-    for number, product in enumerate(products, start=1):
+    for product in products:
         if product['id'] in front_page_product_ids:
             main_image_id = product['relationships']['main_image']['data']['id']
             link_image = api.get_file(file_id=main_image_id)['data']['link']['href']
