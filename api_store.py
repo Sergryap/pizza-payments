@@ -1,5 +1,7 @@
 import os
 import time
+from pprint import pprint
+
 import requests
 
 from environs import Env
@@ -505,7 +507,28 @@ def checkout_cart(reference, customer_id, first_name, last_name, address, phone_
     return response.json()
 
 
+def create_category(name, description):
+    url = 'https://api.moltin.com/v2/categories'
+    headers = {
+        'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}',
+        'Content-Type': 'application/json'
+    }
+    json_data = {
+        'data': {
+            'type': 'category',
+            'name': name,
+            'slug': slugify(name),
+            'description': description,
+            'status': 'live'
+        }
+    }
+    response = requests.post(url, headers=headers, json=json_data)
+    response.raise_for_status()
+    return response.json()
+
+
 if __name__ == '__main__':
     env = Env()
     env.read_env()
     check_token()
+    pprint(create_category('front_page', 'The main products'))
