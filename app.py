@@ -61,7 +61,31 @@ def send_message(recipient_id, message_text):
 
 def send_menu(recipient_id):
     products = api.get_products()['data']
-    elements = []
+    first_element = [
+        {
+            'title': 'Меню',
+            'image_url': 'https://starburger-serg.store/images/logo-pizza.png',
+            'subtitle': 'Здесь выможете выбрать один из товаров',
+            'buttons': [
+                {
+                    'type': 'postback',
+                    'title': 'Корзина',
+                    'payload': 'cart',
+                },
+                {
+                    'type': 'postback',
+                    'title': 'Акции',
+                    'payload': 'action',
+                },
+                {
+                    'type': 'postback',
+                    'title': 'Сделать заказ',
+                    'payload': 'order',
+                },
+            ]
+        }
+    ]
+    elements = first_element.copy()
     several_json_data = []
     for number, product in enumerate(products, start=1):
         main_image_id = product['relationships']['main_image']['data']['id']
@@ -81,7 +105,7 @@ def send_menu(recipient_id):
                 'buttons': buttons
             },
         )
-        if number % 10 == 0 or number == len(products):
+        if number % 9 == 0 or number == len(products):
             several_json_data.append(
                 {
                     'recipient': {
@@ -98,12 +122,12 @@ def send_menu(recipient_id):
                     },
                 }
             )
-            elements = []
+            elements = first_element.copy()
 
     url = "https://graph.facebook.com/v2.6/me/messages"
     params = {"access_token": FACEBOOK_TOKEN}
     headers = {"Content-Type": "application/json"}
-    for json_data in several_json_data:
+    for json_data in several_json_data[:1]:
         response = requests.post(
             url=url,
             params=params, headers=headers, json=json_data
