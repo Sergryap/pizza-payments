@@ -61,11 +61,16 @@ def send_message(recipient_id, message_text):
 
 def send_menu(recipient_id):
     products = api.get_products()['data']
-    first_element = [
+    front_page_products = api.get_node_products(
+        os.environ['HIERARCHY_ID'],
+        os.environ['FRONT_PAGE_NODE_ID']
+    )
+    front_page_product_ids = [product['id'] for product in front_page_products['data']]
+    elements = [
         {
             'title': 'Меню',
             'image_url': 'https://starburger-serg.store/images/logo-pizza.png',
-            'subtitle': 'Здесь выможете выбрать один из товаров',
+            'subtitle': 'Здесь вы можете выбрать один из товаров',
             'buttons': [
                 {
                     'type': 'postback',
@@ -85,54 +90,47 @@ def send_menu(recipient_id):
             ]
         }
     ]
-    elements = first_element.copy()
-    several_json_data = []
     for number, product in enumerate(products, start=1):
-        main_image_id = product['relationships']['main_image']['data']['id']
-        link_image = api.get_file(file_id=main_image_id)['data']['link']['href']
-        buttons = [
-            {
-                'type': 'postback',
-                'title': 'Добавить в корзину',
-                'payload': product['id'],
-            }
-        ]
-        elements.append(
-            {
-                'title': f'{product["attributes"]["name"]} ({product["attributes"]["price"]["RUB"]["amount"]} р.)',
-                'image_url': link_image,
-                'subtitle': product['attributes'].get('description', ''),
-                'buttons': buttons
-            },
-        )
-        if number % 9 == 0 or number == len(products):
-            several_json_data.append(
+        if product['id'] in front_page_product_ids:
+            main_image_id = product['relationships']['main_image']['data']['id']
+            link_image = api.get_file(file_id=main_image_id)['data']['link']['href']
+            buttons = [
                 {
-                    'recipient': {
-                        'id': recipient_id,
-                    },
-                    'message': {
-                        'attachment': {
-                            'type': 'template',
-                            'payload': {
-                                'template_type': 'generic',
-                                'elements': elements
-                            },
-                        },
-                    },
+                    'type': 'postback',
+                    'title': 'Добавить в корзину',
+                    'payload': product['id'],
                 }
+            ]
+            elements.append(
+                {
+                    'title': f'{product["attributes"]["name"]} ({product["attributes"]["price"]["RUB"]["amount"]} р.)',
+                    'image_url': link_image,
+                    'subtitle': product['attributes'].get('description', ''),
+                    'buttons': buttons
+                },
             )
-            elements = first_element.copy()
-
+    json_data = {
+        'recipient': {
+            'id': recipient_id,
+        },
+        'message': {
+            'attachment': {
+                'type': 'template',
+                'payload': {
+                    'template_type': 'generic',
+                    'elements': elements
+                },
+            },
+        },
+    }
     url = "https://graph.facebook.com/v2.6/me/messages"
     params = {"access_token": FACEBOOK_TOKEN}
     headers = {"Content-Type": "application/json"}
-    for json_data in several_json_data[:1]:
-        response = requests.post(
-            url=url,
-            params=params, headers=headers, json=json_data
-        )
-        response.raise_for_status()
+    response = requests.post(
+        url=url,
+        params=params, headers=headers, json=json_data
+    )
+    response.raise_for_status()
 
 
 if __name__ == '__main__':

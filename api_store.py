@@ -527,8 +527,15 @@ def create_category(name, description):
     return response.json()
 
 
+def get_node_products(hierarchy_id, node_id):
+    url = f'https://api.moltin.com/pcm/hierarchies/{hierarchy_id}/nodes/{node_id}/products'
+    headers = {'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}'}
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    return response.json()
+
+
 if __name__ == '__main__':
     env = Env()
     env.read_env()
     check_token()
-    pprint(create_category('front_page', 'The main products'))
