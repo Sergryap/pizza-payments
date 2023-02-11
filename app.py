@@ -1,4 +1,5 @@
 import os
+import re
 import redis
 import api_store as api
 
@@ -70,7 +71,9 @@ def send_message(recipient_id, message_text):
 
 
 def handle_start(recipient_id, node_id=os.environ['FRONT_PAGE_NODE_ID']):
-    node_id = node_id if len(node_id) == 36 else os.environ['FRONT_PAGE_NODE_ID']
+    pattern = re.compile(r'\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}')
+    node_id_verify = bool(pattern.match(node_id))
+    node_id = node_id if node_id_verify else os.environ['FRONT_PAGE_NODE_ID']
     products = api.get_products()['data']
     node_products = api.get_node_products(
         os.environ['HIERARCHY_ID'],
