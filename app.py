@@ -1,4 +1,5 @@
 import os
+import redis
 import api_store as api
 
 import requests
@@ -7,13 +8,17 @@ from flask import Flask, request
 app = Flask(__name__)
 FACEBOOK_TOKEN = os.environ["PAGE_ACCESS_TOKEN"]
 
+database_password = os.environ['DATABASE_PASSWORD']
+database_host = os.environ['DATABASE_HOST']
+database_port = os.environ['DATABASE_PORT']
+db = redis.Redis(host=database_host, port=int(database_port), password=database_password)
+
 
 @app.route('/', methods=['GET'])
 def verify():
     """
     При верификации вебхука у Facebook он отправит запрос на этот адрес. На него нужно ответить VERIFY_TOKEN.
     """
-    send_message('9428707120488443', str(request.get_json()))
     if request.args.get("hub.mode") == "subscribe" and request.args.get("hub.challenge"):
         if not request.args.get("hub.verify_token") == os.environ["VERIFY_TOKEN"]:
             return "Verification token mismatch", 403
@@ -28,7 +33,6 @@ def webhook():
     Основной вебхук, на который будут приходить сообщения от Facebook.
     """
     data = request.get_json()
-    api.check_token()
     if data.get('object') == 'page':
         for entry in data['entry']:
             for messaging_event in entry['messaging']:
@@ -36,15 +40,13 @@ def webhook():
                     sender_id = messaging_event['sender']['id']
                     recipient_id = messaging_event['recipient']['id']
                     message_text = messaging_event['message']['text']
-                    send_message(sender_id, message_text)
-                    send_menu(sender_id)
+
+                    handle_users_reply(sender_id, message_text)
                 elif messaging_event.get('postback'):
                     sender_id = messaging_event['sender']['id']
                     recipient_id = messaging_event['recipient']['id']
-                    payload = messaging_event['postback']['payload']
-                    title = messaging_event['postback']['title']
-                    if title in ['Особые', 'Сытные', 'Острые']:
-                        send_menu(sender_id, payload)
+                    message_text = messaging_event['postback']['payload']
+                    handle_users_reply(sender_id, message_text)
 
     return "ok", 200
 
@@ -67,7 +69,8 @@ def send_message(recipient_id, message_text):
     response.raise_for_status()
 
 
-def send_menu(recipient_id, node_id=os.environ['FRONT_PAGE_NODE_ID']):
+def handle_start(recipient_id, node_id=os.environ['FRONT_PAGE_NODE_ID']):
+    node_id = node_id if len(node_id) == 36 else os.environ['FRONT_PAGE_NODE_ID']
     products = api.get_products()['data']
     node_products = api.get_node_products(
         os.environ['HIERARCHY_ID'],
@@ -162,6 +165,35 @@ def send_menu(recipient_id, node_id=os.environ['FRONT_PAGE_NODE_ID']):
         params=params, headers=headers, json=json_data
     )
     response.raise_for_status()
+
+    return 'START'
+
+
+def handle_users_reply(sender_id, message_text):
+    states_functions = {
+        'START': handle_start,
+        # 'HANDLE_MENU': send_product_info,
+        # 'HANDLE_DESCRIPTION': handle_description,
+        # 'CART_INFO': get_cart_info,
+        # 'HANDLER_CART':  handler_cart,
+        # 'HANDLE_EMAIL': handle_email,
+        # 'HANDLE_PHONE': handle_phone,
+        # 'HANDLE_LOCATION': handle_location,
+        # 'HANDLE_DELIVERY': handle_delivery,
+        # 'HANDLE_PAYMENT': handle_payment,
+        # 'PRECHECKOUT': precheckout_callback,
+    }
+    recorded_state = db.get(f'facebookid_{sender_id}')
+    if not recorded_state or recorded_state.decode("utf-8") not in states_functions.keys():
+        user_state = "START"
+    else:
+        user_state = recorded_state.decode("utf-8")
+    if message_text == "/start":
+        user_state = "START"
+    state_handler = states_functions[user_state]
+    api.check_token()
+    next_state = state_handler(sender_id, message_text)
+    db.set(f'facebookid_{sender_id}', next_state)
 
 
 if __name__ == '__main__':
