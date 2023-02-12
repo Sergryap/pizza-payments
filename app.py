@@ -38,16 +38,17 @@ def webhook():
         for entry in data['entry']:
             for messaging_event in entry['messaging']:
                 if messaging_event.get('message'):
-                    sender_id = messaging_event['sender']['id']
-                    recipient_id = messaging_event['recipient']['id']
-                    message_text = messaging_event['message']['text']
-
-                    handle_users_reply(sender_id, message_text)
+                    handle_users_reply(messaging_event)
+                    # sender_id = messaging_event['sender']['id']
+                    # recipient_id = messaging_event['recipient']['id']
+                    # message_text = messaging_event['message']['text']
+                    # handle_users_reply(sender_id, message_text)
                 elif messaging_event.get('postback'):
-                    sender_id = messaging_event['sender']['id']
-                    recipient_id = messaging_event['recipient']['id']
-                    message_text = messaging_event['postback']['payload']
-                    handle_users_reply(sender_id, message_text)
+                    handle_users_reply(messaging_event)
+                    # sender_id = messaging_event['sender']['id']
+                    # recipient_id = messaging_event['recipient']['id']
+                    # message_text = messaging_event['postback']['payload']
+                    # handle_users_reply(sender_id, message_text)
 
     return "ok", 200
 
@@ -70,14 +71,26 @@ def send_message(recipient_id, message_text):
     response.raise_for_status()
 
 
-def handle_start(recipient_id, node_id=os.environ['FRONT_PAGE_NODE_ID']):
-    pattern = re.compile(r'\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}')
-    node_id_verify = bool(pattern.match(node_id))
-    node_id = node_id if node_id_verify else os.environ['FRONT_PAGE_NODE_ID']
+def handle_start(recipient_id, message_text=os.environ['FRONT_PAGE_NODE_ID'], title=None):
+    if title == 'Добавить в корзину':
+        product_id, product_name = message_text.split('_')
+        api.add_product_to_cart(
+            product_id=product_id,
+            quantity=1,
+            reference=f'facebook_{recipient_id}'
+        )
+        send_message(recipient_id, f'В корзину добавлена пицца {product_name}')
+        return "START"
+    if title == 'Корзина':
+        return handler_cart(recipient_id)
+
+    pattern_category = re.compile(r'\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}')
+    node_id_verify = bool(pattern_category.match(message_text))
+    message_text = message_text if node_id_verify else os.environ['FRONT_PAGE_NODE_ID']
     products = api.get_products()['data']
     node_products = api.get_node_products(
         os.environ['HIERARCHY_ID'],
-        node_id
+        message_text
     )
     node_product_ids = [product['id'] for product in node_products['data']]
     elements = [
@@ -117,7 +130,7 @@ def handle_start(recipient_id, node_id=os.environ['FRONT_PAGE_NODE_ID']):
                         {
                             'type': 'postback',
                             'title': 'Добавить в корзину',
-                            'payload': product['id'],
+                            'payload': f"{product['id']}_{product['attributes']['name']}",
                         }
                     ]
                 },
@@ -172,13 +185,93 @@ def handle_start(recipient_id, node_id=os.environ['FRONT_PAGE_NODE_ID']):
     return 'START'
 
 
-def handle_users_reply(sender_id, message_text):
+def handler_cart(recipient_id, message_text=None, title=None):
+    total_value = (
+        api.get_cart(f'facebook_{recipient_id}')
+        ['data']['meta']['display_price']['without_tax']['formatted']
+    )
+    cart_items = api.get_cart_items(f'facebook_{recipient_id}')
+    elements = [
+        {
+            'title': f'Ваш заказ на сумму {total_value}',
+            'image_url': 'https://starburger-serg.store/images/cart.jpg',
+            'subtitle': 'Выберите, чтобы вы хотели:',
+            'buttons': [
+                {
+                    'type': 'postback',
+                    'title': 'Самовывоз',
+                    'payload': 'PICKUP',
+                },
+                {
+                    'type': 'postback',
+                    'title': 'Доставка',
+                    'payload': 'DELIVERY',
+                },
+                {
+                    'type': 'postback',
+                    'title': 'К меню',
+                    'payload': 'MENU',
+                },
+            ]
+        }
+    ]
+    for item in cart_items['data']:
+        elements.append(
+            {
+                'title': f"{item['name']} ({item['quantity']} шт.)",
+                'image_url': item['image']['href'],
+                'subtitle': item['description'],
+                'buttons': [
+                    {
+                        'type': 'postback',
+                        'title': 'Добавить еще одну',
+                        'payload': item['product_id'],
+                    }
+                ]
+            },
+        )
+    json_data = {
+        'recipient': {
+            'id': recipient_id,
+        },
+        'message': {
+            'attachment': {
+                'type': 'template',
+                'payload': {
+                    'template_type': 'generic',
+                    'elements': elements
+                },
+            },
+        },
+    }
+    url = 'https://graph.facebook.com/v2.6/me/messages'
+    params = {'access_token': FACEBOOK_TOKEN}
+    headers = {'Content-Type': 'application/json'}
+    response = requests.post(
+        url=url,
+        params=params, headers=headers, json=json_data
+    )
+    response.raise_for_status()
+
+    return 'HANDLER_CART'
+
+
+def handle_users_reply(messaging_event):
+    sender_id = messaging_event['sender']['id']
+    if messaging_event.get('message'):
+        message_text = messaging_event['message']['text']
+        title = None
+    elif messaging_event.get('postback'):
+        message_text = messaging_event['postback']['payload']
+        title = messaging_event['postback']['title']
+    else:
+        return
     states_functions = {
         'START': handle_start,
         # 'HANDLE_MENU': send_product_info,
         # 'HANDLE_DESCRIPTION': handle_description,
         # 'CART_INFO': get_cart_info,
-        # 'HANDLER_CART':  handler_cart,
+        'HANDLER_CART':  handler_cart,
         # 'HANDLE_EMAIL': handle_email,
         # 'HANDLE_PHONE': handle_phone,
         # 'HANDLE_LOCATION': handle_location,
@@ -195,7 +288,7 @@ def handle_users_reply(sender_id, message_text):
         user_state = "START"
     state_handler = states_functions[user_state]
     api.check_token()
-    next_state = state_handler(sender_id, message_text)
+    next_state = state_handler(sender_id, message_text, title)
     db.set(f'facebookid_{sender_id}', next_state)
 
 
