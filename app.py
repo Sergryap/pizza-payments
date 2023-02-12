@@ -7,9 +7,10 @@ import requests
 from flask import Flask, request
 from textwrap import dedent
 from geo_informer import fetch_coordinates, get_min_distance_branch
+from api_fb import get_button_template, get_generic_template
+from api_fb import FACEBOOK_TOKEN
 
 app = Flask(__name__)
-FACEBOOK_TOKEN = os.environ["PAGE_ACCESS_TOKEN"]
 
 database_password = os.environ['DATABASE_PASSWORD']
 database_host = os.environ['DATABASE_HOST']
@@ -18,7 +19,7 @@ db = redis.Redis(host=database_host, port=int(database_port), password=database_
 
 THANK_TEXT = 'Спасибо. Мы свяжемся с Вами!'
 GEO_REQUEST_TEXT = 'Для доставки вашего заказа пришлите нам ваш адрес текстом'
-AFTER_EMAIL_TEXT = 'Либо продолжите выбор:'
+AFTER_EMAIL_TEXT = 'Либо вернитесь к выбору:'
 DELIVERY_COST_1 = 100
 DELIVERY_COST_2 = 300
 AFTER_GEO_TEXT = 'Вы можете продолжить выбор, либо уточните адрес:'
@@ -98,6 +99,21 @@ def handle_start(recipient_id, message_text=os.environ['FRONT_PAGE_NODE_ID'], ti
             recipient_id,
             'Введите ваш email, либо продолжите выбор:'
         )
+        get_button_template(
+            recipient_id, 'Либо отмените ввод email, либо вернитесь в меню',
+            buttons=[
+                {
+                    'type': 'postback',
+                    'title': 'Отменить',
+                    'payload': 'NEXT_STEP',
+                },
+                {
+                    'type': 'postback',
+                    'title': 'К меню',
+                    'payload': '/start'
+                }
+            ]
+        )
         return 'HANDLE_EMAIL'
 
     pattern_category = re.compile(r'\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}')
@@ -175,28 +191,7 @@ def handle_start(recipient_id, message_text=os.environ['FRONT_PAGE_NODE_ID'], ti
             ]
         },
     )
-    json_data = {
-        'recipient': {
-            'id': recipient_id,
-        },
-        'message': {
-            'attachment': {
-                'type': 'template',
-                'payload': {
-                    'template_type': 'generic',
-                    'elements': elements
-                },
-            },
-        },
-    }
-    url = 'https://graph.facebook.com/v2.6/me/messages'
-    params = {'access_token': FACEBOOK_TOKEN}
-    headers = {'Content-Type': 'application/json'}
-    response = requests.post(
-        url=url,
-        params=params, headers=headers, json=json_data
-    )
-    response.raise_for_status()
+    get_generic_template(recipient_id, elements)
 
     return 'START'
 
@@ -269,34 +264,16 @@ def handler_cart(recipient_id, message_text=None, title=None):
                 ]
             },
         )
-    json_data = {
-        'recipient': {
-            'id': recipient_id,
-        },
-        'message': {
-            'attachment': {
-                'type': 'template',
-                'payload': {
-                    'template_type': 'generic',
-                    'elements': elements
-                },
-            },
-        },
-    }
-    url = 'https://graph.facebook.com/v2.6/me/messages'
-    params = {'access_token': FACEBOOK_TOKEN}
-    headers = {'Content-Type': 'application/json'}
-    response = requests.post(
-        url=url,
-        params=params, headers=headers, json=json_data
-    )
-    response.raise_for_status()
+    get_generic_template(recipient_id, elements)
 
     return 'HANDLER_CART'
 
 
 def handle_email(recipient_id, message_text=None, title=None):
-    user_email = message_text.lower().strip()
+    if message_text == 'NEXT_STEP':
+        user_email = 'none@none.com'
+    else:
+        user_email = message_text.lower().strip()
     email_rule = re.compile(r'(^\S+@\S+\.\S+$)', flags=re.IGNORECASE)
     if email_rule.search(user_email):
         actual_return = 'HANDLE_PHONE'
@@ -312,6 +289,16 @@ def handle_email(recipient_id, message_text=None, title=None):
         msg = f'Введите корректный email'
         actual_return = 'HANDLE_EMAIL'
     send_message(recipient_id, msg)
+    get_button_template(
+        recipient_id, AFTER_EMAIL_TEXT,
+        buttons=[
+            {
+                'type': 'postback',
+                'title': 'К меню',
+                'payload': '/start'
+            }
+        ]
+    )
 
     return actual_return
 
@@ -322,11 +309,21 @@ def handle_phone(recipient_id, message_text=None, title=None):
     if phone_rule.search(user_phone):
         actual_return = 'HANDLE_LOCATION'
         db.set(f'{recipient_id}_phone', user_phone)
-        msg = f'{THANK_TEXT}\n{GEO_REQUEST_TEXT}\n{AFTER_EMAIL_TEXT}'
+        msg = f'{THANK_TEXT}\n{GEO_REQUEST_TEXT}'
     else:
         actual_return = 'HANDLE_PHONE'
         msg = f'Введите корректный номер телефона'
     send_message(recipient_id, msg)
+    get_button_template(
+        recipient_id, AFTER_EMAIL_TEXT,
+        buttons=[
+            {
+                'type': 'postback',
+                'title': 'К меню',
+                'payload': '/start'
+            }
+        ]
+    )
 
     return actual_return
 
