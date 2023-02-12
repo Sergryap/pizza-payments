@@ -77,7 +77,7 @@ def handle_start(recipient_id, message_text=os.environ['FRONT_PAGE_NODE_ID'], ti
         api.add_product_to_cart(
             product_id=product_id,
             quantity=1,
-            reference=f'facebook_{recipient_id}'
+            reference=recipient_id
         )
         send_message(recipient_id, f'В корзину добавлена пицца {product_name}')
         return "START"
@@ -186,11 +186,25 @@ def handle_start(recipient_id, message_text=os.environ['FRONT_PAGE_NODE_ID'], ti
 
 
 def handler_cart(recipient_id, message_text=None, title=None):
+    if title == 'К меню':
+        return handle_start(recipient_id, message_text)
+    elif title == 'Добавить еще одну':
+        product_id, product_name = message_text.split('_')
+        api.add_product_to_cart(
+            product_id=product_id,
+            quantity=1,
+            reference=recipient_id
+        )
+        send_message(recipient_id, f'В корзину добавлена пицца {product_name}')
+    elif title == 'Убрать из корзины':
+        item_cart_id, product_name = message_text.split('_')
+        api.remove_cart_item(recipient_id, item_cart_id)
+        send_message(recipient_id, f'Пицца {product_name} удалена из корзины')
     total_value = (
-        api.get_cart(f'facebook_{recipient_id}')
+        api.get_cart(recipient_id)
         ['data']['meta']['display_price']['without_tax']['formatted']
     )
-    cart_items = api.get_cart_items(f'facebook_{recipient_id}')
+    cart_items = api.get_cart_items(recipient_id)
     elements = [
         {
             'title': f'Ваш заказ на сумму {total_value}',
@@ -210,7 +224,7 @@ def handler_cart(recipient_id, message_text=None, title=None):
                 {
                     'type': 'postback',
                     'title': 'К меню',
-                    'payload': 'MENU',
+                    'payload': os.environ['FRONT_PAGE_NODE_ID'],
                 },
             ]
         }
@@ -225,8 +239,13 @@ def handler_cart(recipient_id, message_text=None, title=None):
                     {
                         'type': 'postback',
                         'title': 'Добавить еще одну',
-                        'payload': item['product_id'],
-                    }
+                        'payload': f"{item['product_id']}_{item['name']}",
+                    },
+                    {
+                        'type': 'postback',
+                        'title': 'Убрать из корзины',
+                        'payload': f"{item['id']}_{item['name']}",
+                    },
                 ]
             },
         )
