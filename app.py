@@ -5,6 +5,8 @@ import api_store as api
 
 import requests
 from flask import Flask, request
+from textwrap import dedent
+from geo_informer import fetch_coordinates, get_min_distance_branch
 
 app = Flask(__name__)
 FACEBOOK_TOKEN = os.environ["PAGE_ACCESS_TOKEN"]
@@ -13,6 +15,14 @@ database_password = os.environ['DATABASE_PASSWORD']
 database_host = os.environ['DATABASE_HOST']
 database_port = os.environ['DATABASE_PORT']
 db = redis.Redis(host=database_host, port=int(database_port), password=database_password)
+
+THANK_TEXT = 'Спасибо. Мы свяжемся с Вами!'
+GEO_REQUEST_TEXT = 'Для доставки вашего заказа пришлите нам ваш адрес текстом'
+AFTER_EMAIL_TEXT = 'Либо продолжите выбор:'
+DELIVERY_COST_1 = 100
+DELIVERY_COST_2 = 300
+AFTER_GEO_TEXT = 'Вы можете продолжить выбор, либо уточните адрес:'
+REPIET_SEND_COORD = 'Извините, но мы не смогли определить ваши координаты!'
 
 
 @app.route('/', methods=['GET'])
@@ -80,9 +90,15 @@ def handle_start(recipient_id, message_text=os.environ['FRONT_PAGE_NODE_ID'], ti
             reference=recipient_id
         )
         send_message(recipient_id, f'В корзину добавлена пицца {product_name}')
-        return "START"
-    if title == 'Корзина':
+        return 'START'
+    elif title == 'Корзина':
         return handler_cart(recipient_id)
+    elif title == 'Сделать заказ':
+        send_message(
+            recipient_id,
+            'Введите ваш email, либо продолжите выбор:'
+        )
+        return 'HANDLE_EMAIL'
 
     pattern_category = re.compile(r'\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}')
     node_id_verify = bool(pattern_category.match(message_text))
@@ -200,6 +216,10 @@ def handler_cart(recipient_id, message_text=None, title=None):
         item_cart_id, product_name = message_text.split('_')
         api.remove_cart_item(recipient_id, item_cart_id)
         send_message(recipient_id, f'Пицца {product_name} удалена из корзины')
+    # elif title == 'Доставка':
+    #     pass
+    # elif title == 'Самовывоз':
+    #     pass
     total_value = (
         api.get_cart(recipient_id)
         ['data']['meta']['display_price']['without_tax']['formatted']
@@ -275,6 +295,126 @@ def handler_cart(recipient_id, message_text=None, title=None):
     return 'HANDLER_CART'
 
 
+def handle_email(recipient_id, message_text=None, title=None):
+    user_email = message_text.lower().strip()
+    email_rule = re.compile(r'(^\S+@\S+\.\S+$)', flags=re.IGNORECASE)
+    if email_rule.search(user_email):
+        actual_return = 'HANDLE_PHONE'
+        db.set(f'{recipient_id}_mail', user_email)
+        msg = 'Введите Ваш телефон'
+        try:
+            customer = api.create_customer(f'facebookid_{recipient_id}', user_email)
+            db.set(f'{recipient_id}_customer_id', customer['data']['id'])
+        except requests.exceptions.HTTPError:
+            found_user = api.get_all_customers(user_email)
+            db.set(f'{recipient_id}_customer_id', found_user['data'][0].get('id'))
+    else:
+        msg = f'Введите корректный email'
+        actual_return = 'HANDLE_EMAIL'
+    send_message(recipient_id, msg)
+
+    return actual_return
+
+
+def handle_phone(recipient_id, message_text=None, title=None):
+    user_phone = message_text
+    phone_rule = re.compile(r'(^[+0-9]{1,3})*([0-9]{10,11}$)')
+    if phone_rule.search(user_phone):
+        actual_return = 'HANDLE_LOCATION'
+        db.set(f'{recipient_id}_phone', user_phone)
+        msg = f'{THANK_TEXT}\n{GEO_REQUEST_TEXT}\n{AFTER_EMAIL_TEXT}'
+    else:
+        actual_return = 'HANDLE_PHONE'
+        msg = f'Введите корректный номер телефона'
+    send_message(recipient_id, msg)
+
+    return actual_return
+
+
+def handle_location(recipient_id, message_text=None, title=None):
+
+    address = message_text
+    current_pos = fetch_coordinates(os.environ['YANDEX_GEO_TOKEN'], address)
+
+    if current_pos:
+        branch_address, branch_dist, telegram_id = get_min_distance_branch(current_pos)
+        user_email = db.get(f'{recipient_id}_mail').decode('utf-8')
+        user_phone = db.get(f'{recipient_id}_phone').decode('utf-8')
+        existing_entry = api.get_entry_by_pos(user_email, user_phone, current_pos)
+        address = address if address else 'Пользователь не указал адрес'
+        current_lat, current_lng = current_pos
+        if not existing_entry:
+            customer_address_entry = api.create_entry(
+                flow_slug='customer-address',
+                fields_data={
+                    'address': address,
+                    'email': user_email.lower().strip(),
+                    'phone': user_phone,
+                    'latitude': current_lat,
+                    'longitude': current_lng
+                }
+            )
+            api.create_entry_relationship(
+                flow_slug='customer-address',
+                entry_id=customer_address_entry['data']['id'],
+                field_slug='customer',
+                resource_type='customer',
+                resource_id=db.get(f'{recipient_id}_customer_id').decode('utf-8')
+            )
+        if branch_dist <= 0.5:
+            msg = f'''
+                   Можете забрать пиццу из нашей пиццерии неподалеку?
+                   Она всего в {round(branch_dist*1000, 0)} метров от Вас!
+                   Вот её адрес: {branch_address}.
+                   А можем и бесплатно доставить нам не сложно.
+                   '''
+            delivery_cost = 0
+        elif branch_dist <= 5:
+            msg = f'''
+                   Похоже придется ехать до Вас на самокате.
+                   Доставка будет стоить {DELIVERY_COST_1} р.
+                   Доставляем или самовывоз?
+                   '''
+            delivery_cost = DELIVERY_COST_1
+        elif branch_dist <= 20:
+            msg = f'''
+                   Похоже придется ехать до Вас на автомобиле.
+                   Доставка будет стоить {DELIVERY_COST_2} р.
+                   Доставляем или самовывоз?
+                   '''
+            delivery_cost = DELIVERY_COST_2
+        elif branch_dist <= 50:
+            msg = f'''
+                   Простите но так далеко мы пиццу не доставляем.
+                   Ближайшая пиццерия от Вас в {round(branch_dist, 0)} км.
+                   Но вы может забрать её самостоятельно.
+                   Оформляем самовывоз?
+                   '''
+            delivery_cost = 0
+        else:
+            msg = f'''
+                   Простите но так далеко мы пиццу не доставляем.
+                   Ближайшая пиццерия от Вас в {round(branch_dist, 0)} км.
+                   Мы уверены, что есть другие пиццерии гораздо ближе.
+                   Либо уточните адрес доставки.
+                   '''
+        msg = f'{dedent(msg)}\n{AFTER_GEO_TEXT}'
+    else:
+        msg = f'{THANK_TEXT}\n{REPIET_SEND_COORD}\n{AFTER_GEO_TEXT}'
+    send_message(recipient_id, msg)
+    if current_pos and branch_dist <= 50:
+        api.checkout_cart(
+            reference=recipient_id,
+            customer_id=db.get(f'{recipient_id}_customer_id').decode('utf-8'),
+            first_name='Test',
+            last_name='Test',
+            address=address,
+            phone_number=db.get(f'{recipient_id}_phone').decode('utf-8')
+        )
+        return 'START'
+    return 'START'
+
+
 def handle_users_reply(messaging_event):
     sender_id = messaging_event['sender']['id']
     if messaging_event.get('message'):
@@ -291,9 +431,9 @@ def handle_users_reply(messaging_event):
         # 'HANDLE_DESCRIPTION': handle_description,
         # 'CART_INFO': get_cart_info,
         'HANDLER_CART':  handler_cart,
-        # 'HANDLE_EMAIL': handle_email,
-        # 'HANDLE_PHONE': handle_phone,
-        # 'HANDLE_LOCATION': handle_location,
+        'HANDLE_EMAIL': handle_email,
+        'HANDLE_PHONE': handle_phone,
+        'HANDLE_LOCATION': handle_location,
         # 'HANDLE_DELIVERY': handle_delivery,
         # 'HANDLE_PAYMENT': handle_payment,
         # 'PRECHECKOUT': precheckout_callback,
