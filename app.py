@@ -2,6 +2,7 @@ import os
 import re
 import redis
 import api_store as api
+import json
 
 import requests
 from flask import Flask, request
@@ -24,6 +25,10 @@ DELIVERY_COST_1 = 100
 DELIVERY_COST_2 = 300
 AFTER_GEO_TEXT = 'Вы можете продолжить выбор, либо уточните адрес:'
 REPIET_SEND_COORD = 'Извините, но мы не смогли определить ваши координаты!'
+SPECIAL_NODE_ID = '07f5eb2c-815e-41c9-be78-a41b985dd430'
+SATISFYING_NODE_ID = '18557b54-9f75-4ce3-92e1-637c402100aa'
+SPICY_NODE_ID = '6111eb37-d408-40aa-a7d1-87cfbc17e044'
+FRONT_PAGE_NODE_ID = 'd00bc494-5ecd-44f2-a943-2b46f745e200'
 
 
 @app.route('/', methods=['GET'])
@@ -50,17 +55,11 @@ def webhook():
             for messaging_event in entry['messaging']:
                 if messaging_event.get('message'):
                     handle_users_reply(messaging_event)
-                    # sender_id = messaging_event['sender']['id']
-                    # recipient_id = messaging_event['recipient']['id']
-                    # message_text = messaging_event['message']['text']
-                    # handle_users_reply(sender_id, message_text)
                 elif messaging_event.get('postback'):
                     handle_users_reply(messaging_event)
-                    # sender_id = messaging_event['sender']['id']
-                    # recipient_id = messaging_event['recipient']['id']
-                    # message_text = messaging_event['postback']['payload']
-                    # handle_users_reply(sender_id, message_text)
-
+    elif data.get('triggered_by') == 'catalog-release.updated':
+        for node_id in [FRONT_PAGE_NODE_ID, SPECIAL_NODE_ID, SATISFYING_NODE_ID, SPICY_NODE_ID]:
+            get_product_elements(node_id, event=True)
     return "ok", 200
 
 
@@ -82,7 +81,7 @@ def send_message(recipient_id, message_text):
     response.raise_for_status()
 
 
-def handle_start(recipient_id, message_text=os.environ['FRONT_PAGE_NODE_ID'], title=None):
+def handle_start(recipient_id, message_text=FRONT_PAGE_NODE_ID, title=None):
     if title == 'Добавить в корзину':
         product_id, product_name = message_text.split('_')
         api.add_product_to_cart(
@@ -118,13 +117,7 @@ def handle_start(recipient_id, message_text=os.environ['FRONT_PAGE_NODE_ID'], ti
 
     pattern_category = re.compile(r'\b\w{8}-\w{4}-\w{4}-\w{4}-\w{12}')
     node_id_verify = bool(pattern_category.match(message_text))
-    message_text = message_text if node_id_verify else os.environ['FRONT_PAGE_NODE_ID']
-    products = api.get_products()['data']
-    node_products = api.get_node_products(
-        os.environ['HIERARCHY_ID'],
-        message_text
-    )
-    node_product_ids = [product['id'] for product in node_products['data']]
+    node_id = message_text if node_id_verify else FRONT_PAGE_NODE_ID
     elements = [
         {
             'title': 'Меню',
@@ -149,24 +142,8 @@ def handle_start(recipient_id, message_text=os.environ['FRONT_PAGE_NODE_ID'], ti
             ]
         }
     ]
-    for product in products:
-        if product['id'] in node_product_ids:
-            main_image_id = product['relationships']['main_image']['data']['id']
-            link_image = api.get_file(file_id=main_image_id)['data']['link']['href']
-            elements.append(
-                {
-                    'title': f'{product["attributes"]["name"]} ({product["attributes"]["price"]["RUB"]["amount"]} р.)',
-                    'image_url': link_image,
-                    'subtitle': product['attributes'].get('description', ''),
-                    'buttons': [
-                        {
-                            'type': 'postback',
-                            'title': 'Добавить в корзину',
-                            'payload': f"{product['id']}_{product['attributes']['name']}",
-                        }
-                    ]
-                },
-            )
+    product_elements = get_product_elements(node_id)
+    elements.extend(product_elements)
     elements.append(
         {
             'title': 'Не нашли нужную пиццу?',
@@ -176,17 +153,17 @@ def handle_start(recipient_id, message_text=os.environ['FRONT_PAGE_NODE_ID'], ti
                 {
                     'type': 'postback',
                     'title': 'Особые',
-                    'payload': '07f5eb2c-815e-41c9-be78-a41b985dd430',
+                    'payload': SPECIAL_NODE_ID,
                 },
                 {
                     'type': 'postback',
                     'title': 'Сытные',
-                    'payload': '18557b54-9f75-4ce3-92e1-637c402100aa',
+                    'payload': SATISFYING_NODE_ID,
                 },
                 {
                     'type': 'postback',
                     'title': 'Острые',
-                    'payload': '6111eb37-d408-40aa-a7d1-87cfbc17e044',
+                    'payload': SPICY_NODE_ID,
                 },
             ]
         },
@@ -194,6 +171,38 @@ def handle_start(recipient_id, message_text=os.environ['FRONT_PAGE_NODE_ID'], ti
     get_generic_template(recipient_id, elements)
 
     return 'START'
+
+
+def get_product_elements(node_id, event=False):
+    product_elements = db.get(node_id)
+    if not product_elements or event:
+        product_elements = []
+        products = api.get_products()['data']
+        node_products = api.get_node_products(os.environ['HIERARCHY_ID'], node_id)
+        node_product_ids = [product['id'] for product in node_products['data']]
+        for product in products:
+            if product['id'] in node_product_ids:
+                main_image_id = product['relationships']['main_image']['data']['id']
+                link_image = api.get_file(file_id=main_image_id)['data']['link']['href']
+                product_elements.append(
+                    {
+                        'title': f'{product["attributes"]["name"]} ({product["attributes"]["price"]["RUB"]["amount"]} р.)',
+                        'image_url': link_image,
+                        'subtitle': product['attributes'].get('description', ''),
+                        'buttons': [
+                            {
+                                'type': 'postback',
+                                'title': 'Добавить в корзину',
+                                'payload': f"{product['id']}_{product['attributes']['name']}",
+                            }
+                        ]
+                    },
+                )
+        db.set(node_id, json.dumps(product_elements))
+    else:
+        product_elements = json.loads(product_elements)
+
+    return product_elements
 
 
 def handler_cart(recipient_id, message_text=None, title=None):

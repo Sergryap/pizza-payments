@@ -1,7 +1,5 @@
 import os
 import time
-from pprint import pprint
-
 import requests
 
 from environs import Env
@@ -535,7 +533,34 @@ def get_node_products(hierarchy_id, node_id):
     return response.json()
 
 
+def create_webhook_integration(webhook_url):
+    url = 'https://api.moltin.com/v2/integrations'
+    headers = {
+        'Authorization': f'Bearer {os.environ["ACCESS_TOKEN"]}',
+        'Content-Type': 'application/json'
+    }
+    json_data = {
+        'data': {
+            'type': 'integration',
+            'name': 'Catalog',
+            'description': 'Track сhanges in the сatalog',
+            'enabled': True,
+            'observes': [
+                'catalog-release.updated',
+            ],
+            'integration_type': 'webhook',
+            'configuration': {
+                'url': webhook_url
+            }
+        }
+    }
+    response = requests.post(url, headers=headers, json=json_data)
+    response.raise_for_status()
+    return response.json()
+
+
 if __name__ == '__main__':
     env = Env()
     env.read_env()
     check_token()
+    create_webhook_integration('https://starburger-serg.store')
