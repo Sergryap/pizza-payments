@@ -184,12 +184,8 @@ VERIFY_TOKEN=<токен для верификации webhook - произво�
 
 5. Запустите бота выполнив команды
 
-```sh
+```
 systemctl daemon-reload
-```
-```sh
 systemctl start facebook-bot-webhook.service
-```
-```sh
 systemctl enable facebook-bot-webhook.service 
 ```
