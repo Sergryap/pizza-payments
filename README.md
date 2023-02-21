@@ -136,7 +136,7 @@ server {
 
 2. Настройте автоматическое обновление сертификатов для домена создав два файла:
 
-##### certbot-renewal.service:
+certbot-renewal.service:
 ```
 [Unit]
 Description=Certbot Renewal
@@ -144,7 +144,7 @@ Description=Certbot Renewal
 [Service]
 ExecStart=/usr/bin/certbot renew --force-renewal --post-hook "systemctl reload nginx.service"
 ```
-##### certbot-renewal.timer:
+certbot-renewal.timer:
 ```
 [Unit]
 Description=Timer for Certbot Renewal
@@ -158,7 +158,7 @@ WantedBy=multi-user.target
 ```
 3. Настройте автоматический запуск webhook:
 
-##### Для этого создайте файл /etc/systemd/system/facebook-bot-webhook.service:
+Для этого создайте файл `/etc/systemd/system/facebook-bot-webhook.service`:
 ```
 [Unit]
 Description=fb-webhook-site
