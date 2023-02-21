@@ -190,3 +190,6 @@ systemctl daemon-reload
 systemctl start facebook-bot-webhook.service
 systemctl enable facebook-bot-webhook.service 
 ```
+
+#### Ссылка на fb приложение с ботом:
+[fb-pizza-bot](https://www.facebook.com/profile.php?id=100089995515393)
