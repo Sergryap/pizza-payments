@@ -135,7 +135,7 @@ server {
 При этом замените название домена на своё
 2. Настройте автоматическое обновление сертификатов для домена создав два файла:
 
-###### certbot-renewal.service:
+##### certbot-renewal.service:
 ```
 [Unit]
 Description=Certbot Renewal
@@ -151,6 +151,23 @@ Description=Timer for Certbot Renewal
 [Timer]
 OnBootSec=300
 OnUnitActiveSec=1w
+
+[Install]
+WantedBy=multi-user.target
+```
+3. Настройте автоматический запуск webhook:
+
+##### Для этого создайте файл /etc/systemd/system/facebook-bot-webhook.service:
+```
+[Unit]
+Description=fb-webhook-site
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/facebook-bot-webhook
+EnvironmentFile=/opt/facebook-bot-webhook/.env
+ExecStart=/opt/facebook-bot-webhook/venv/bin/gunicorn -w 3 -b 127.0.0.1:8003 fb_bot:app
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
