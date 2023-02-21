@@ -174,7 +174,15 @@ Restart=always
 WantedBy=multi-user.target
 ```
 
-4. Запустите бота выполнив команды
+4. В файл `.env` добавьте значения переменных:
+
+```
+HIERARCHY_ID=<HIERARCHY ID от магазина moltin>
+FRONT_PAGE_NODE_ID=<NODE ID от вашего основного node для главного меню>
+PAGE_ACCESS_TOKEN=<Токен от вашего приложения facebook>
+VERIFY_TOKEN=<токен для верификации webhook - произвольная строка>
+
+5. Запустите бота выполнив команды
 
 ```sh
 systemctl daemon-reload
