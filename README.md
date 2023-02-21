@@ -114,7 +114,7 @@ server {
 	  root /var/www/html;
     server_name starburger-serg.store;
     listen [::]:443 ssl ipv6only=on;
-    listen 443 ssl; # managed by Certbot
+    listen 443 ssl;
     ssl_certificate /etc/letsencrypt/live/starburger-serg.store/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/starburger-serg.store/privkey.pem;
     include /etc/letsencrypt/options-ssl-nginx.conf;
