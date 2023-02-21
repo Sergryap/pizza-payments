@@ -133,3 +133,25 @@ server {
 }
 ```
 При этом замените название домена на своё
+2. Настройте автоматическое обновление сертификатов для домена создав два файла:
+
+###### certbot-renewal.service:
+```
+[Unit]
+Description=Certbot Renewal
+
+[Service]
+ExecStart=/usr/bin/certbot renew --force-renewal --post-hook "systemctl reload nginx.service"
+```
+##### certbot-renewal.timer:
+```
+[Unit]
+Description=Timer for Certbot Renewal
+
+[Timer]
+OnBootSec=300
+OnUnitActiveSec=1w
+
+[Install]
+WantedBy=multi-user.target
+```
