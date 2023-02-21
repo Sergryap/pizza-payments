@@ -95,3 +95,41 @@ pip install -r requirements.txt
 python3 bot_tg.py
 ```
 
+## Как установить бота для Facebook
+
+Бот facebook реализован в модуле fb_bot.py посредством технологии webhook.
+
+### Для запуска webhook (специального сайта на который приходят события от api facebook) выполните следующее:
+1. Установите nginx на своем удаленном сервере и пропишите в его настройках следуюущую конфигурацию:
+```
+server {
+        location /images/ {
+                alias /opt/facebook-bot-webhook/images/;
+        }      
+        location / {
+                 include '/etc/nginx/proxy_params';
+                 proxy_pass http://127.0.0.1:8003/;
+        }
+
+	  root /var/www/html;
+    server_name starburger-serg.store;
+    listen [::]:443 ssl ipv6only=on;
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/starburger-serg.store/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/starburger-serg.store/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+}
+server {
+    if ($host = starburger-serg.store) {
+        return 301 https://$host$request_uri;
+    }
+    
+	listen 80 ;
+	listen [::]:80 ;
+    server_name starburger-serg.store;
+    return 404;
+}
+```
+При этом замените название домена на своё
