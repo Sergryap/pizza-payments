@@ -433,16 +433,10 @@ def handle_users_reply(messaging_event):
         return
     states_functions = {
         'START': handle_start,
-        # 'HANDLE_MENU': send_product_info,
-        # 'HANDLE_DESCRIPTION': handle_description,
-        # 'CART_INFO': get_cart_info,
         'HANDLER_CART':  handler_cart,
         'HANDLE_EMAIL': handle_email,
         'HANDLE_PHONE': handle_phone,
         'HANDLE_LOCATION': handle_location,
-        # 'HANDLE_DELIVERY': handle_delivery,
-        # 'HANDLE_PAYMENT': handle_payment,
-        # 'PRECHECKOUT': precheckout_callback,
     }
     recorded_state = db.get(f'facebookid_{sender_id}')
     if not recorded_state or recorded_state.decode("utf-8") not in states_functions.keys():
