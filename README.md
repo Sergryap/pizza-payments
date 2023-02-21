@@ -133,6 +133,7 @@ server {
 }
 ```
 При этом замените название домена на своё
+
 2. Настройте автоматическое обновление сертификатов для домена создав два файла:
 
 ##### certbot-renewal.service:
@@ -171,4 +172,16 @@ Restart=always
 
 [Install]
 WantedBy=multi-user.target
+```
+
+4. Запустите бота выполнив команды
+
+```sh
+systemctl daemon-reload
+```
+```sh
+systemctl start facebook-bot-webhook.service
+```
+```sh
+systemctl enable facebook-bot-webhook.service 
 ```
